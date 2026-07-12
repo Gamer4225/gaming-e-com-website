@@ -1,0 +1,145 @@
+/* ========================================
+   ProductCard — Rich gaming-style card
+   Hover lift, neon accents, discount tags
+   ======================================== */
+
+.pcard {
+  background: var(--gradient-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  animation: fadeInUp 0.4s ease both;
+  position: relative;
+}
+.pcard:hover {
+  transform: translateY(-8px);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Image */
+.pcard-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 195px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+.pcard-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform var(--transition-normal);
+}
+.pcard:hover .pcard-img-wrap img { transform: scale(1.08); }
+
+/* Badges */
+.pcard-badges { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; }
+.pcard-badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.68rem;
+  font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.pcard-badge-new { background: var(--color-success); color: #fff; }
+.pcard-badge-used { background: var(--color-warning); color: #111; }
+.pcard-badge-soldout { background: var(--color-danger); color: #fff; }
+.pcard-badge-low { background: rgba(255,149,0,0.9); color: #fff; }
+
+/* Discount tag */
+.pcard-discount-tag {
+  position: absolute; top: 10px; right: 10px;
+  padding: 5px 12px; background: var(--color-danger); color: #fff;
+  border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 800;
+  box-shadow: 0 2px 12px rgba(255,59,48,0.35);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Body */
+.pcard-body { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+
+.pcard-brand-row { display: flex; justify-content: space-between; align-items: center; }
+.pcard-brand { font-size: 0.72rem; color: var(--color-primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+.pcard-cat { font-size: 0.68rem; color: var(--text-muted); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; }
+
+.pcard-name {
+  font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 2.5em;
+}
+
+/* Rating */
+.pcard-rating { display: flex; align-items: center; gap: 6px; }
+.pcard-stars { display: flex; gap: 1px; font-size: 0.78rem; }
+.pcard-rating-num { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
+
+/* Tags */
+.pcard-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcard-tag {
+  font-size: 0.68rem; color: var(--text-muted); background: var(--bg-tertiary);
+  padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+  display: flex; align-items: center; gap: 3px;
+}
+.pcard-tag-free { color: var(--color-success); border-color: rgba(0,200,83,0.2); }
+.pcard-tag-instock { color: var(--color-primary); border-color: rgba(0,191,255,0.2); background: rgba(0,191,255,0.06); }
+
+/* Stock */
+.pcard-stock { font-size: 0.72rem; display: flex; align-items: center; gap: 5px; color: var(--text-secondary); }
+.stock-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.stock-dot.in { background: var(--color-success); box-shadow: 0 0 6px var(--color-success); }
+.stock-dot.low { background: var(--color-warning); box-shadow: 0 0 6px var(--color-warning); }
+.stock-dot.out { background: var(--color-danger); }
+
+/* Footer */
+.pcard-foot {
+  padding: 12px 16px 14px; display: flex; align-items: flex-end;
+  justify-content: space-between; border-top: 1px solid var(--border-color);
+  gap: 10px;
+}
+
+/* Actions row: qty picker + add button */
+.pcard-actions {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+
+/* Qty Picker */
+.pcard-qty-picker {
+  display: flex; align-items: center; border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.pcard-qty-btn {
+  width: 28px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-tertiary); color: var(--text-primary); font-size: 0.95rem; font-weight: 700;
+  transition: all var(--transition-fast); border: none;
+}
+.pcard-qty-btn:hover:not(:disabled) { background: var(--color-primary); color: #fff; }
+.pcard-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.pcard-qty-val {
+  width: 28px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-primary); font-weight: 700; font-size: 0.82rem; color: var(--text-primary);
+}
+.pcard-price-col { display: flex; flex-direction: column; gap: 1px; }
+.pcard-price { font-size: 1.2rem; font-weight: 900; color: var(--color-primary); }
+.pcard-original { font-size: 0.76rem; color: var(--text-muted); text-decoration: line-through; }
+.pcard-save { font-size: 0.7rem; color: var(--color-success); font-weight: 600; }
+
+.pcard-add-btn {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--color-success), #00a843);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font-weight: 700; font-size: 0.8rem; transition: all var(--transition-fast);
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.pcard-add-btn:hover:not(.disabled) {
+  transform: scale(1.06); box-shadow: 0 4px 18px rgba(0,200,83,0.35);
+}
+.pcard-add-btn:active:not(.disabled) { transform: scale(0.97); }
+.pcard-add-btn.disabled { background: #333; color: #666; cursor: not-allowed; }
+
+/* Make card clickable */
+.pcard { cursor: pointer; }
+
+@media (max-width: 480px) {
+  .pcard-name { font-size: 0.88rem; }
+  .pcard-price { font-size: 1.05rem; }
+}

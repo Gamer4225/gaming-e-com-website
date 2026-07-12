@@ -1,0 +1,118 @@
+/* ========================================
+   Navbar — Gaming neon top navigation
+   ======================================== */
+
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--navbar-height);
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; z-index: 1000;
+}
+
+.navbar-logo {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; flex-shrink: 0;
+}
+.navbar-logo-icon { font-size: 1.6rem; }
+.navbar-logo-text {
+  font-size: 1.4rem; font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.navbar-links { display: flex; align-items: center; gap: 4px; }
+.navbar-link {
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  color: var(--text-secondary); font-weight: 500; font-size: 0.92rem;
+  transition: all var(--transition-fast); background: none;
+}
+.navbar-link:hover, .navbar-link.active {
+  color: var(--color-primary);
+  background: rgba(0,191,255,0.08);
+}
+
+.navbar-search { position: relative; flex: 0 1 340px; }
+.navbar-search input {
+  width: 100%; padding: 10px 16px 10px 40px;
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg); color: var(--text-primary);
+  font-size: 0.88rem; outline: none; transition: all var(--transition-fast);
+}
+.navbar-search input::placeholder { color: var(--text-muted); }
+.navbar-search input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0,191,255,0.1);
+}
+.navbar-search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 0.88rem;
+}
+
+.navbar-cart {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 10px 18px; background: var(--bg-tertiary);
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  color: var(--text-primary); font-weight: 500; font-size: 0.9rem;
+  transition: all var(--transition-fast); cursor: pointer;
+}
+.navbar-cart:hover {
+  border-color: var(--color-primary);
+  background: rgba(0,191,255,0.06);
+  box-shadow: 0 0 15px rgba(0,191,255,0.1);
+}
+.navbar-cart-icon { font-size: 1.2rem; }
+.navbar-cart-badge {
+  position: absolute; top: -7px; right: -7px;
+  background: var(--color-danger); color: #fff;
+  font-size: 0.68rem; font-weight: 700;
+  min-width: 20px; height: 20px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px; box-shadow: 0 0 10px rgba(255,59,48,0.4);
+}
+
+.navbar-hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  background: none; padding: 8px; cursor: pointer;
+}
+.navbar-hamburger span {
+  display: block; width: 22px; height: 2px;
+  background: var(--text-primary); border-radius: 2px;
+  transition: all var(--transition-fast);
+}
+
+.navbar-mobile-menu {
+  display: none; position: fixed;
+  top: var(--navbar-height); left: 0; right: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px; flex-direction: column; gap: 8px;
+  z-index: 999; animation: fadeInUp 0.25s ease;
+}
+.navbar-mobile-menu.open { display: flex; }
+.navbar-mobile-menu .navbar-link { padding: 12px 16px; font-size: 1rem; }
+
+.navbar-mobile-search { display: none; }
+.navbar-mobile-search input {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-size: 0.92rem; outline: none;
+}
+.navbar-mobile-search input:focus { border-color: var(--color-primary); }
+
+@media (max-width: 992px) {
+  .navbar-links { display: none; }
+  .navbar-search { display: none; }
+  .navbar-hamburger { display: flex; }
+  .navbar-mobile-search { display: block; }
+}
+
+@media (max-width: 480px) {
+  .navbar { padding: 0 12px; }
+  .navbar-logo-text { font-size: 1.2rem; }
+  .navbar-cart { padding: 8px 12px; font-size: 0.85rem; }
+}
