@@ -212,6 +212,13 @@ function authRequired(req, res, next) {
   });
 }
 
+function adminRequired(req, res, next) {
+  authRequired(req, res, () => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    next();
+  });
+}
+
 /** Compatibility pairs for frequently bought together */
 const COMPAT_MAP = {
   CPU: ["PC Cabinet", "RAM", "SSD", "GPU", "Monitor"],
@@ -680,6 +687,127 @@ app.post("/api/recommendations/cart", (req, res) => {
   res.json({ items: recs });
 });
 
+
+// ---------- Admin ----------
+app.get("/api/admin/stats", adminRequired, (_req, res) => {
+  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products").get().c;
+  const totalOrders = db.prepare("SELECT COUNT(*) as c FROM orders").get().c;
+  const totalUsers = db.prepare("SELECT COUNT(*) as c FROM users").get().c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0").get().c;
+  const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND stock <= 3").get().c;
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(grandTotal),0) as c FROM orders").get().c;
+  const catStats = db.prepare(
+    "SELECT category, COUNT(*) as total, SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as outOfStock FROM products GROUP BY category ORDER BY category"
+  ).all();
+  const recentOrders = db.prepare(
+    "SELECT orderId, grandTotal, placedAt FROM orders ORDER BY id DESC LIMIT 5"
+  ).all();
+  res.json({ totalProducts, totalOrders, totalUsers, outOfStock, lowStock, totalRevenue, catStats, recentOrders });
+});
+
+app.get("/api/admin/products", adminRequired, (req, res) => {
+  const { q } = req.query;
+  let sql = "SELECT * FROM products WHERE 1=1";
+  const params = {};
+  if (q && String(q).trim()) {
+    sql += " AND (LOWER(name) LIKE @q OR LOWER(brand) LIKE @q OR LOWER(category) LIKE @q)";
+    params.q = "%" + String(q).trim().toLowerCase() + "%";
+  }
+  sql += " ORDER BY id ASC";
+  res.json(db.prepare(sql).all(params).map(mapProduct));
+});
+
+app.post("/api/admin/products", adminRequired, (req, res) => {
+  const b = req.body || {};
+  if (!b.name || !b.brand || !b.category || !b.price || !b.condition || !b.warranty || !b.description || !b.image) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+  const maxId = db.prepare("SELECT MAX(id) as m FROM products").get().m || 0;
+  const newId = maxId + 1;
+  db.prepare("INSERT INTO products (id,name,brand,category,price,originalPrice,discount,condition,warranty,rating,stock,description,image,featured,specs) VALUES (@id,@n,@b,@c,@p,@op,@d,@cd,@w,@r,@s,@desc,@img,@f,@sp)").run({
+    id: newId, n: String(b.name).trim(), b: String(b.brand).trim(), c: String(b.category).trim(),
+    p: Number(b.price), op: Number(b.originalPrice || b.price), d: Number(b.discount || 0),
+    cd: String(b.condition), w: String(b.warranty), r: Number(b.rating || 4),
+    s: Number(b.stock || 10), desc: String(b.description), img: String(b.image),
+    f: 0, sp: b.specs ? JSON.stringify(b.specs) : null,
+  });
+  res.status(201).json(mapProduct(db.prepare("SELECT * FROM products WHERE id = ?").get(newId)));
+});
+
+app.put("/api/admin/products/:id", adminRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Product not found" });
+  const b = req.body || {};
+  db.prepare("UPDATE products SET name=@n,brand=@b,category=@c,price=@p,originalPrice=@op,discount=@d,condition=@cd,warranty=@w,rating=@r,stock=@s,description=@desc,image=@img,specs=@sp WHERE id=@id").run({
+    id, n: b.name ?? row.name, b: b.brand ?? row.brand, c: b.category ?? row.category,
+    p: b.price ?? row.price, op: b.originalPrice ?? row.originalPrice, d: b.discount ?? row.discount,
+    cd: b.condition ?? row.condition, w: b.warranty ?? row.warranty, r: b.rating ?? row.rating,
+    s: b.stock ?? row.stock, desc: b.description ?? row.description, img: b.image ?? row.image,
+    sp: b.specs !== undefined ? JSON.stringify(b.specs) : row.specs,
+  });
+  res.json(mapProduct(db.prepare("SELECT * FROM products WHERE id = ?").get(id)));
+});
+
+app.delete("/api/admin/products/:id", adminRequired, (req, res) => {
+  const id = Number(req.params.id);
+  if (!db.prepare("SELECT id FROM products WHERE id = ?").get(id)) return res.status(404).json({ error: "Product not found" });
+  db.prepare("DELETE FROM products WHERE id = ?").run(id);
+  res.json({ ok: true, deleted: id });
+});
+
+app.patch("/api/admin/products/:id/feature", adminRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare("SELECT featured FROM products WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Product not found" });
+  const newVal = row.featured ? 0 : 1;
+  db.prepare("UPDATE products SET featured = ? WHERE id = ?").run(newVal, id);
+  res.json({ id, featured: !!newVal });
+});
+
+app.patch("/api/admin/products/:id/stock", adminRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const { stock } = req.body || {};
+  if (stock === undefined || Number(stock) < 0) return res.status(400).json({ error: "Valid stock value required" });
+  if (!db.prepare("SELECT id FROM products WHERE id = ?").get(id)) return res.status(404).json({ error: "Product not found" });
+  db.prepare("UPDATE products SET stock = ? WHERE id = ?").run(Number(stock), id);
+  res.json({ id, stock: Number(stock) });
+});
+
+app.get("/api/admin/orders", adminRequired, (_req, res) => {
+  const orders = db.prepare("SELECT * FROM orders ORDER BY id DESC").all();
+  const itemStmt = db.prepare("SELECT * FROM order_items WHERE orderId = ?");
+  res.json(orders.map((o) => ({
+    orderId: o.orderId, paymentMethod: o.paymentMethod, subtotal: o.subtotal, gstAmount: o.gstAmount,
+    totalSavings: o.totalSavings, grandTotal: o.grandTotal, itemCount: o.itemCount, placedAt: o.placedAt,
+    estimatedDelivery: o.estimatedDelivery,
+    address: { fullName: o.fullName, phone: o.phone, email: o.email || "", addressLine1: o.addressLine1, addressLine2: o.addressLine2 || "", city: o.city, state: o.state, pincode: o.pincode },
+    items: itemStmt.all(o.orderId).map((i) => ({ id: i.productId, name: i.name, brand: i.brand, image: i.image, price: i.price, originalPrice: i.originalPrice, quantity: i.quantity, condition: i.condition })),
+  })));
+});
+
+app.get("/api/admin/users", adminRequired, (_req, res) => {
+  const users = db.prepare("SELECT id, name, email, phone, role, createdAt FROM users ORDER BY id ASC").all();
+  res.json(users.map((u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone || "", role: u.role, createdAt: u.createdAt })));
+});
+
+app.put("/api/admin/change-password", adminRequired, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword || String(newPassword).length < 6) return res.status(400).json({ error: "Current and new password (min 6 chars) required" });
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
+  if (!bcrypt.compareSync(String(currentPassword), user.passwordHash)) return res.status(401).json({ error: "Current password is incorrect" });
+  db.prepare("UPDATE users SET passwordHash = ? WHERE id = ?").run(bcrypt.hashSync(String(newPassword), 10), req.user.id);
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/reseed", adminRequired, (_req, res) => {
+  if (!fs.existsSync(SEED_PATH)) return res.status(400).json({ error: "Seed file not found" });
+  db.prepare("DELETE FROM products").run();
+  const products = JSON.parse(fs.readFileSync(SEED_PATH, "utf8"));
+  const ins = db.prepare("INSERT INTO products (id,name,brand,category,price,originalPrice,discount,condition,warranty,rating,stock,description,image,featured,specs) VALUES (@id,@n,@b,@c,@p,@op,@d,@cd,@w,@r,@s,@desc,@img,@f,@sp)");
+  db.transaction((rows) => { for (const p of rows) ins.run({ id: p.id, n: p.name, b: p.brand, c: p.category, p: p.price, op: p.originalPrice, d: p.discount || 0, cd: p.condition, w: p.warranty, r: p.rating, s: p.stock, desc: p.description, img: p.image, f: p.featured ? 1 : 0, sp: p.specs ? JSON.stringify(p.specs) : null }); })(products);
+  res.json({ ok: true, count: products.length });
+});
 
 app.listen(PORT, () => {
   console.log(`GameVault API running at http://localhost:${PORT}`);

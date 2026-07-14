@@ -21,6 +21,11 @@ import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminProducts from "./pages/AdminProducts";
+import AdminOrders from "./pages/AdminOrders";
+import AdminUsers from "./pages/AdminUsers";
+import AdminChangePassword from "./pages/AdminChangePassword";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
 
@@ -55,7 +60,12 @@ function AppContent() {
     currentPage === "orders" ||
     currentPage === "wishlist" ||
     currentPage === "login" ||
-    currentPage === "signup";
+    currentPage === "signup" ||
+    currentPage === "admin-dashboard" ||
+    currentPage === "admin-products" ||
+    currentPage === "admin-orders" ||
+    currentPage === "admin-users" ||
+    currentPage === "admin-password";
 
   const renderPage = () => {
     switch (currentPage) {
@@ -117,6 +127,16 @@ function AppContent() {
         return <Login setCurrentPage={handleSetCurrentPage} />;
       case "signup":
         return <Signup setCurrentPage={handleSetCurrentPage} />;
+      case "admin-dashboard":
+        return <AdminDashboard setCurrentPage={handleSetCurrentPage} />;
+      case "admin-products":
+        return <AdminProducts setCurrentPage={handleSetCurrentPage} />;
+      case "admin-orders":
+        return <AdminOrders setCurrentPage={handleSetCurrentPage} />;
+      case "admin-users":
+        return <AdminUsers setCurrentPage={handleSetCurrentPage} />;
+      case "admin-password":
+        return <AdminChangePassword setCurrentPage={handleSetCurrentPage} />;
       default:
         return (
           <Home

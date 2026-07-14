@@ -151,6 +151,11 @@ function Navbar({
                   <span>{user.email}</span>
                   {user.role === "admin" && <span className="navbar-role-badge">Admin</span>}
                 </div>
+                {user.role === "admin" && (
+                  <button onClick={() => { handleNav("admin-dashboard"); setUserMenuOpen(false); }} style={{ color: "var(--color-primary)", fontWeight: 700 }}>
+                    ⚙ Admin Panel
+                  </button>
+                )}
                 <button onClick={() => { handleNav("orders"); setUserMenuOpen(false); }}>
                   My Orders
                 </button>
@@ -246,6 +251,14 @@ function Navbar({
               {user.role === "admin" && <span className="navbar-admin-badge">ADMIN</span>}
               <strong>{user.name}</strong>
             </div>
+            {user.role === "admin" && (
+              <button className="navbar-link" onClick={() => handleNav("admin-dashboard")} style={{ color: "var(--color-primary)" }}>
+                ⚙ Admin Panel
+              </button>
+            )}
+            <button className="navbar-link" onClick={() => { handleNav("orders"); }}>
+              My Orders
+            </button>
             <button className="navbar-link" onClick={() => { logout(); handleNav("home"); }}>
               Logout
             </button>
