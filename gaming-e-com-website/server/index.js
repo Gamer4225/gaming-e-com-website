@@ -91,6 +91,12 @@ function ensureSchema(db) {
       createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE TABLE IF NOT EXISTS wishlists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productId INTEGER NOT NULL UNIQUE,
+      count INTEGER NOT NULL DEFAULT 1,
+      lastAdded TEXT NOT NULL
+    );
   `);
   // Migration: add role column if missing
   const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
@@ -818,7 +824,41 @@ app.put("/api/admin/change-password", adminRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Wishlist ----------
+app.get("/api/wishlist", (req, res) => {
+  const ids = db.prepare("SELECT productId FROM wishlists ORDER BY lastAdded DESC").all().map(r => r.productId);
+  res.json({ ids });
+});
+
+app.post("/api/wishlist/:id", (req, res) => {
+  const productId = Number(req.params.id);
+  const product = db.prepare("SELECT id FROM products WHERE id = ?").get(productId);
+  if (!product) return res.status(404).json({ error: "Product not found" });
+  const existing = db.prepare("SELECT * FROM wishlists WHERE productId = ?").get(productId);
+  if (existing) {
+    db.prepare("DELETE FROM wishlists WHERE productId = ?").run(productId);
+    res.json({ added: false, productId });
+  } else {
+    db.prepare("INSERT INTO wishlists (productId, count, lastAdded) VALUES (?, 1, ?)").run(productId, new Date().toISOString());
+    res.json({ added: true, productId });
+  }
+});
+
+app.post("/api/wishlist/sync", (req, res) => {
+  const { ids } = req.body || {};
+  if (!Array.isArray(ids)) return res.status(400).json({ error: "ids array required" });
+  const existing = new Set(db.prepare("SELECT productId FROM wishlists").all().map(r => r.productId));
+  const newIds = new Set(ids.filter(id => typeof id === "number"));
+  // Remove items no longer in client list
+  for (const eid of existing) { if (!newIds.has(eid)) db.prepare("DELETE FROM wishlists WHERE productId = ?").run(eid); }
+  // Add new items
+  const now = new Date().toISOString();
+  for (const nid of newIds) { if (!existing.has(nid)) db.prepare("INSERT OR IGNORE INTO wishlists (productId, count, lastAdded) VALUES (?, 1, ?)").run(nid, now); }
+  res.json({ ok: true, synced: db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c });
+});
+
 // Most ordered products
+
 app.get("/api/admin/most-ordered", adminRequired, (_req, res) => {
   const rows = db.prepare(`
     SELECT oi.productId as id, oi.name, oi.brand, oi.image, p.category, p.stock, p.price,
@@ -829,13 +869,15 @@ app.get("/api/admin/most-ordered", adminRequired, (_req, res) => {
   res.json(rows);
 });
 
-// Most wishlisted products (from a wishlist tracking table, or fallback to featured+rating)
-// Since wishlist is localStorage-only (no backend), we return top-rated items as proxy
+// Most wishlisted products (real DB data)
 app.get("/api/admin/most-wishlisted", adminRequired, (_req, res) => {
-  const rows = db.prepare(
-    "SELECT id, name, brand, category, price, stock, image, rating, featured FROM products WHERE stock > 0 ORDER BY featured DESC, rating DESC LIMIT 30"
-  ).all();
-  res.json(rows.map(r => ({ ...r, wishlistCount: Math.round(r.rating * r.rating * 3 + (r.featured ? 10 : 0)) })));
+  const rows = db.prepare(`
+    SELECT p.id, p.name, p.brand, p.category, p.price, p.stock, p.image, p.rating, p.featured,
+           COALESCE(w.count, 0) as wishlistCount
+    FROM products p LEFT JOIN wishlists w ON w.productId = p.id
+    ORDER BY w.count DESC, p.rating DESC LIMIT 30
+  `).all();
+  res.json(rows);
 });
 
 app.get("/api/admin/brands", adminRequired, (_req, res) => {

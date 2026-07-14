@@ -1,12 +1,7 @@
-// WishlistContext.tsx - Persist wishlist product IDs in localStorage
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  type ReactNode,
-} from "react";
+// WishlistContext.tsx — Persist wishlist in localStorage + sync to server
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { API_BASE } from "./ProductCatalogContext";
+import { useAuth } from "./AuthContext";
 
 interface WishlistContextValue {
   wishlistIds: number[];
@@ -18,7 +13,6 @@ interface WishlistContextValue {
 }
 
 const WISHLIST_KEY = "gamevault_wishlist";
-
 const WishlistContext = createContext<WishlistContextValue | undefined>(undefined);
 
 export function useWishlist(): WishlistContextValue {
@@ -33,28 +27,44 @@ function loadIds(): number[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as number[];
     return Array.isArray(parsed) ? parsed.filter((n) => typeof n === "number") : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlistIds, setWishlistIds] = useState<number[]>(() => loadIds());
+  const { token } = useAuth();
 
   useEffect(() => {
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds));
   }, [wishlistIds]);
 
-  const isInWishlist = useCallback(
-    (id: number) => wishlistIds.includes(id),
-    [wishlistIds]
-  );
+  useEffect(() => {
+    if (!token || wishlistIds.length === 0) return;
+    const timer = setTimeout(() => {
+      fetch(`${API_BASE}/api/wishlist/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: wishlistIds }),
+      }).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [wishlistIds, token]);
 
-  const toggleWishlist = useCallback((id: number) => {
-    setWishlistIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }, []);
+  const toggleWishlist = useCallback(
+    (id: number) => {
+      setWishlistIds((prev) => {
+        const updated = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+        if (token) {
+          fetch(`${API_BASE}/api/wishlist/${id}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => {});
+        }
+        return updated;
+      });
+    },
+    [token]
+  );
 
   const removeFromWishlist = useCallback((id: number) => {
     setWishlistIds((prev) => prev.filter((x) => x !== id));
@@ -62,16 +72,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   const clearWishlist = useCallback(() => setWishlistIds([]), []);
 
+  const isInWishlist = useCallback(
+    (id: number) => wishlistIds.includes(id),
+    [wishlistIds]
+  );
+
   return (
     <WishlistContext.Provider
-      value={{
-        wishlistIds,
-        isInWishlist,
-        toggleWishlist,
-        removeFromWishlist,
-        clearWishlist,
-        wishlistCount: wishlistIds.length,
-      }}
+      value={{ wishlistIds, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: wishlistIds.length }}
     >
       {children}
     </WishlistContext.Provider>
