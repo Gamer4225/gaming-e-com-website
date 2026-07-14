@@ -26,7 +26,9 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
-import StaffDashboard from "./pages/StaffDashboard";
+import SubAdminDashboard from "./pages/SubAdminDashboard";
+import MerchantDashboard from "./pages/MerchantDashboard";
+import SellerDashboard from "./pages/SellerDashboard";
 import StaffProducts from "./pages/StaffProducts";
 import CustomerAccount from "./pages/CustomerAccount";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
@@ -51,16 +53,16 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
     { id: "admin-password", label: "Change Password" },
   ];
   else if (isSubAdmin) tabs = [
-    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "Products" },
+    { id: "sub-dashboard", label: "Dashboard" }, { id: "staff-products", label: "Products" },
     { id: "admin-orders", label: "Orders" }, { id: "admin-ordered", label: "Most Ordered" },
     { id: "admin-password", label: "Change Password" },
   ];
   else if (isMerchant) tabs = [
-    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Products" },
+    { id: "merchant-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Products" },
     { id: "admin-ordered", label: "Most Ordered" }, { id: "admin-password", label: "Change Password" },
   ];
   else if (isSeller) tabs = [
-    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Listings" },
+    { id: "seller-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Listings" },
     { id: "admin-password", label: "Change Password" },
   ];
   return (
@@ -126,6 +128,9 @@ function AppContent() {
     currentPage === "admin-ordered" ||
     currentPage === "admin-wishlisted" ||
     currentPage === "staff-dashboard" ||
+    currentPage === "sub-dashboard" ||
+    currentPage === "merchant-dashboard" ||
+    currentPage === "seller-dashboard" ||
     currentPage === "staff-products" ||
     currentPage === "account";
 
@@ -203,8 +208,14 @@ function AppContent() {
         return <AdminMostOrdered setCurrentPage={handleSetCurrentPage} activePage="admin-ordered" />;
       case "admin-wishlisted":
         return <AdminMostWishlisted setCurrentPage={handleSetCurrentPage} activePage="admin-wishlisted" />;
+      case "sub-dashboard":
+        return <SubAdminDashboard setCurrentPage={handleSetCurrentPage} />;
+      case "merchant-dashboard":
+        return <MerchantDashboard setCurrentPage={handleSetCurrentPage} />;
+      case "seller-dashboard":
+        return <SellerDashboard setCurrentPage={handleSetCurrentPage} />;
       case "staff-dashboard":
-        return <StaffDashboard setCurrentPage={handleSetCurrentPage} />;
+        return <SellerDashboard setCurrentPage={handleSetCurrentPage} />;
       case "staff-products":
         return <StaffProducts setCurrentPage={handleSetCurrentPage} />;
       case "account":

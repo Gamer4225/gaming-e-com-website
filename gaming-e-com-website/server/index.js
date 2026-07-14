@@ -992,6 +992,23 @@ app.post("/api/staff/products", staffRequired, (req, res) => {
   res.status(201).json(mapProduct(db.prepare("SELECT * FROM products WHERE id = ?").get(newId)));
 });
 
+// Staff edit product
+app.put("/api/staff/products/:id", staffRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Product not found" });
+  if (req.user.role === "seller" && row.sellerId !== req.user.id) return res.status(403).json({ error: "Not your listing" });
+  if (req.user.role === "merchant") { const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id); if (row.brand !== u?.brand) return res.status(403).json({ error: "Not your brand" }); }
+  const b = req.body || {};
+  db.prepare("UPDATE products SET name=@n,brand=@b,category=@c,price=@p,originalPrice=@op,discount=@d,warranty=@w,rating=@r,stock=@s,description=@desc,image=@img WHERE id=@id").run({
+    id, n: b.name ?? row.name, b: b.brand ?? row.brand, c: b.category ?? row.category,
+    p: b.price ?? row.price, op: b.originalPrice ?? row.originalPrice, d: b.discount ?? row.discount,
+    w: b.warranty ?? row.warranty, r: b.rating ?? row.rating, s: b.stock ?? row.stock,
+    desc: b.description ?? row.description, img: b.image ?? row.image,
+  });
+  res.json(mapProduct(db.prepare("SELECT * FROM products WHERE id = ?").get(id)));
+});
+
 // Staff update stock
 app.patch("/api/staff/products/:id/stock", staffRequired, (req, res) => {
   const id = Number(req.params.id);
@@ -1033,24 +1050,46 @@ app.get("/api/staff/most-ordered", staffRequired, (req, res) => {
   res.json(rows);
 });
 
-// Staff dashboard (reuse existing admin dashboard data but scoped)
-app.get("/api/staff/dashboard", staffRequired, (req, res) => {
-  let productFilter = "";
-  const params: any = {};
-  if (req.user.role === "merchant") {
-    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
-    productFilter = " AND p.brand = @brand";
-    params.brand = u?.brand || "";
-  }
-  if (req.user.role === "seller") {
-    productFilter = " AND p.sellerId = @sid";
-    params.sid = req.user.id;
-  }
-  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products p WHERE 1=1" + productFilter).get(params).c;
-  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products p WHERE stock = 0" + productFilter).get(params).c;
-  const totalRevenue = db.prepare("SELECT COALESCE(SUM(o.grandTotal),0) as c FROM orders o JOIN order_items oi ON oi.orderId = o.orderId JOIN products p ON p.id = oi.productId WHERE 1=1" + productFilter).get(params).c;
-  const recentOrders = db.prepare("SELECT DISTINCT o.orderId, o.grandTotal, o.placedAt, o.status FROM orders o JOIN order_items oi ON oi.orderId = o.orderId JOIN products p ON p.id = oi.productId WHERE 1=1" + productFilter + " ORDER BY o.id DESC LIMIT 5").all(params);
-  res.json({ totalProducts, outOfStock, totalRevenue, recentOrders });
+// Sub-admin dashboard
+app.get("/api/sub-admin/dashboard", subAdminRequired, (_req, res) => {
+  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products").get().c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0").get().c;
+  const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND stock <= 3").get().c;
+  const totalOrders = db.prepare("SELECT COUNT(*) as c FROM orders").get().c;
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(grandTotal),0) as c FROM orders").get().c;
+  const catStats = db.prepare("SELECT category, COUNT(*) as total, SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as oos FROM products GROUP BY category ORDER BY total DESC").all();
+  const recentOrders = db.prepare("SELECT orderId, grandTotal, placedAt, status, fullName FROM orders ORDER BY id DESC LIMIT 10").all();
+  const topProducts = db.prepare("SELECT oi.productId as id, oi.name, oi.brand, SUM(oi.quantity) as sold FROM order_items oi GROUP BY oi.productId ORDER BY sold DESC LIMIT 5").all();
+  res.json({ totalProducts, outOfStock, lowStock, totalOrders, totalRevenue, catStats, recentOrders, topProducts });
+});
+
+// Merchant dashboard
+app.get("/api/merchant/dashboard", merchantRequired, (req, res) => {
+  const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+  const brand = u?.brand || "";
+  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products WHERE brand = ?").get(brand).c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE brand = ? AND stock = 0").get(brand).c;
+  const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE brand = ? AND stock > 0 AND stock <= 3").get(brand).c;
+  const catStats = db.prepare("SELECT category, COUNT(*) as total, SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as oos FROM products WHERE brand = ? GROUP BY category ORDER BY total DESC").all(brand);
+  // Revenue from orders containing their brand
+  const brandRevenue = db.prepare("SELECT COALESCE(SUM(o.grandTotal),0) as c FROM orders o JOIN order_items oi ON oi.orderId = o.orderId WHERE oi.brand = ?").get(brand).c;
+  // Total units sold
+  const unitsSold = db.prepare("SELECT COALESCE(SUM(oi.quantity),0) as c FROM order_items oi WHERE oi.brand = ?").get(brand).c;
+  const recentOrders = db.prepare("SELECT DISTINCT o.orderId, o.grandTotal, o.placedAt, o.status, o.fullName FROM orders o JOIN order_items oi ON oi.orderId = o.orderId WHERE oi.brand = ? ORDER BY o.id DESC LIMIT 10").all(brand);
+  const topProducts = db.prepare("SELECT oi.productId as id, oi.name, SUM(oi.quantity) as sold FROM order_items oi WHERE oi.brand = ? GROUP BY oi.productId ORDER BY sold DESC LIMIT 5").all(brand);
+  try { const allBrands = db.prepare("SELECT DISTINCT brand FROM products ORDER BY brand").all().map(r => r.brand); return res.json({ brand, totalProducts, outOfStock, lowStock, catStats, totalRevenue: brandRevenue, unitsSold, recentOrders, topProducts, allBrands }); } catch { res.json({ brand, totalProducts, outOfStock, lowStock, catStats, totalRevenue: brandRevenue, unitsSold, recentOrders, topProducts }); }
+});
+
+// Seller dashboard
+app.get("/api/seller/dashboard", sellerRequired, (req, res) => {
+  const sid = req.user.id;
+  const totalListed = db.prepare("SELECT COUNT(*) as c FROM products WHERE sellerId = ?").get(sid).c;
+  const active = db.prepare("SELECT COUNT(*) as c FROM products WHERE sellerId = ? AND stock > 0").get(sid).c;
+  const soldUnits = db.prepare("SELECT COALESCE(SUM(oi.quantity),0) as c FROM order_items oi JOIN products p ON p.id = oi.productId WHERE p.sellerId = ?").get(sid).c;
+  const earnings = db.prepare("SELECT COALESCE(SUM(oi.price * oi.quantity),0) as c FROM order_items oi JOIN products p ON p.id = oi.productId WHERE p.sellerId = ?").get(sid).c;
+  const myProducts = db.prepare("SELECT id, name, brand, category, price, stock FROM products WHERE sellerId = ? ORDER BY stock ASC").all(sid);
+  const recentSales = db.prepare("SELECT oi.name, oi.price, oi.quantity, o.orderId, o.placedAt FROM order_items oi JOIN orders o ON o.orderId = oi.orderId JOIN products p ON p.id = oi.productId WHERE p.sellerId = ? ORDER BY o.id DESC LIMIT 10").all(sid);
+  res.json({ totalListed, active, soldUnits, earnings, myProducts, recentSales });
 });
 
 // Customer profile + change password

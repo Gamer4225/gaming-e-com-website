@@ -153,7 +153,7 @@ function Navbar({
                   {user.role === "admin" && <span className="navbar-role-badge">Admin</span>}
                 </div>
                 {(user.role === "admin" || user.role === "sub-admin" || user.role === "merchant" || user.role === "seller") && (
-                  <button onClick={() => { handleNav(user.role === "admin" ? "admin-dashboard" : "staff-dashboard"); setUserMenuOpen(false); }} style={{ color: "var(--color-primary)", fontWeight: 700 }}>
+                  <button onClick={() => { handleNav(user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : user.role === "merchant" ? "merchant-dashboard" : "seller-dashboard"); setUserMenuOpen(false); }} style={{ color: "var(--color-primary)", fontWeight: 700 }}>
                     ⚙ {user.role === "admin" ? "Admin Panel" : user.role === "sub-admin" ? "Staff Panel" : user.role === "merchant" ? "Merchant Panel" : "Seller Panel"}
                   </button>
                 )}
@@ -256,7 +256,7 @@ function Navbar({
               <strong>{user.name}</strong>
             </div>
             {(user.role === "admin" || user.role === "sub-admin" || user.role === "merchant" || user.role === "seller") && (
-              <button className="navbar-link" onClick={() => handleNav(user.role === "admin" ? "admin-dashboard" : "staff-dashboard")} style={{ color: "var(--color-primary)" }}>
+              <button className="navbar-link" onClick={() => handleNav(user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : user.role === "merchant" ? "merchant-dashboard" : "seller-dashboard")} style={{ color: "var(--color-primary)" }}>
                 ⚙ Panel
               </button>
             )}
