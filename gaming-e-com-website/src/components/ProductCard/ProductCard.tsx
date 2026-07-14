@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useProductDetail, type Product } from "../../context/ProductDetailContext";
+import { useAuth } from "../../context/AuthContext";
 import ProductImage from "../ProductImage/ProductImage";
 import "./ProductCard.css";
 
@@ -24,6 +25,8 @@ function ProductCard({ product }: { product: Product }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { viewProduct } = useProductDetail();
   // Local quantity state for the +/- picker on the card
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [qty, setQty] = useState(1);
   const wished = isInWishlist(product.id);
 
@@ -152,7 +155,7 @@ function ProductCard({ product }: { product: Product }) {
             onClick={handleAdd}
             disabled={soldOut || cartFull}
           >
-            {soldOut ? (isPreOwned ? "🔴 Sold" : "🔴 Sold Out") : cartFull ? "✓ In Cart" : "🛒 Add"}
+            {isAdmin ? "🔒 Admin View" : soldOut ? (isPreOwned ? "🔴 Sold" : "🔴 Sold Out") : cartFull ? "✓ In Cart" : "🛒 Add"}
           </button>
         </div>
       </div>

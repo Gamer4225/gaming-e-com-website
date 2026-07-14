@@ -120,6 +120,7 @@ function Navbar({
           />
         </div>
 
+        {user?.role !== "admin" && (
         <button
           type="button"
           className={`navbar-cart ${shaking ? "cart-shake" : ""}`}
@@ -132,6 +133,7 @@ function Navbar({
           <span>Cart</span>
           {totalItems > 0 && <span className="navbar-cart-badge">{totalItems}</span>}
         </button>
+        )}
 
         {/* User / Auth */}
         {user ? (
@@ -224,9 +226,11 @@ function Navbar({
         >
           Orders
         </button>
+        {user?.role !== "admin" && (
         <button className="navbar-link" onClick={handleOpenCart}>
           Cart ({totalItems})
         </button>
+        )}
         <button
           className={`navbar-link ${currentPage === "about" ? "active" : ""}`}
           onClick={() => handleNav("about")}

@@ -1,6 +1,7 @@
 // CartDrawer.tsx - Right-side slide-over cart + frequently bought together
 import { useEffect, useMemo } from "react";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
 import { useProductDetail } from "../../context/ProductDetailContext";
 import CartItem from "../CartItem/CartItem";
@@ -34,6 +35,8 @@ function CartDrawer({ setCurrentPage, setSelectedCategory }: CartDrawerProps) {
     addToCart,
   } = useCart();
   const { products } = useProductCatalog();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { viewProduct } = useProductDetail();
 
   const fbt = useMemo(
@@ -204,9 +207,15 @@ function CartDrawer({ setCurrentPage, setSelectedCategory }: CartDrawerProps) {
                 </div>
               </div>
 
-              <button type="button" className="cart-drawer-primary-btn" onClick={goCheckout}>
-                ✅ Proceed to Checkout
-              </button>
+              {isAdmin ? (
+                <div style={{ padding: "12px", background: "rgba(255,59,48,.08)", border: "1px solid rgba(255,59,48,.25)", borderRadius: "var(--radius-sm)", fontSize: ".85rem", color: "var(--color-danger)", fontWeight: 600, textAlign: "center" }}>
+                  🔒 Admin accounts cannot place orders. Please use a customer account.
+                </div>
+              ) : (
+                <button type="button" className="cart-drawer-primary-btn" onClick={goCheckout}>
+                  ✅ Proceed to Checkout
+                </button>
+              )}
               <button type="button" className="cart-drawer-secondary-btn" onClick={continueShopping}>
                 ← Continue Shopping
               </button>

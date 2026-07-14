@@ -5,6 +5,7 @@ import {
   type PaymentMethod,
   type ShippingAddress,
 } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import "./Checkout.css";
 
 function formatPrice(price: number) {
@@ -38,6 +39,8 @@ const emptyAddress: ShippingAddress = {
 
 function Checkout({ setCurrentPage }: CheckoutProps) {
   const { cartItems, totalItems, totalPrice, placeOrder } = useCart();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [address, setAddress] = useState<ShippingAddress>(emptyAddress);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
@@ -52,6 +55,21 @@ function Checkout({ setCurrentPage }: CheckoutProps) {
           <p>Your cart is empty. Add products before placing an order.</p>
           <button className="checkout-empty-btn" onClick={() => setCurrentPage("products")}>
             Browse Products
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <div className="checkout-page">
+        <div className="checkout-empty">
+          <div className="checkout-empty-icon">🔒</div>
+          <h3>Admin Access Restricted</h3>
+          <p>Admin accounts cannot place orders. Use a customer account to purchase products.</p>
+          <button className="checkout-empty-btn" onClick={() => setCurrentPage("admin-dashboard")}>
+            Go to Admin Dashboard
           </button>
         </div>
       </div>

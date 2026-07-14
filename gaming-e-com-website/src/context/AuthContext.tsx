@@ -61,6 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
     localStorage.setItem(TOKEN_KEY, nextToken);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    // Clear cart if logging in as admin (admins cannot purchase)
+    if (nextUser.role === "admin") {
+      localStorage.removeItem("gamevault_cart");
+    }
   };
 
   const logout = useCallback(() => {
