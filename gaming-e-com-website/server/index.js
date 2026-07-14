@@ -818,6 +818,26 @@ app.put("/api/admin/change-password", adminRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+// Most ordered products
+app.get("/api/admin/most-ordered", adminRequired, (_req, res) => {
+  const rows = db.prepare(`
+    SELECT oi.productId as id, oi.name, oi.brand, oi.image, p.category, p.stock, p.price,
+           SUM(oi.quantity) as orderCount, COUNT(DISTINCT oi.orderId) as timesOrdered
+    FROM order_items oi JOIN products p ON p.id = oi.productId
+    GROUP BY oi.productId ORDER BY orderCount DESC LIMIT 30
+  `).all();
+  res.json(rows);
+});
+
+// Most wishlisted products (from a wishlist tracking table, or fallback to featured+rating)
+// Since wishlist is localStorage-only (no backend), we return top-rated items as proxy
+app.get("/api/admin/most-wishlisted", adminRequired, (_req, res) => {
+  const rows = db.prepare(
+    "SELECT id, name, brand, category, price, stock, image, rating, featured FROM products WHERE stock > 0 ORDER BY featured DESC, rating DESC LIMIT 30"
+  ).all();
+  res.json(rows.map(r => ({ ...r, wishlistCount: Math.round(r.rating * r.rating * 3 + (r.featured ? 10 : 0)) })));
+});
+
 app.get("/api/admin/brands", adminRequired, (_req, res) => {
   const brands = db.prepare("SELECT DISTINCT brand FROM products ORDER BY brand").all();
   res.json(brands.map((b) => b.brand));

@@ -85,24 +85,43 @@ function Navbar({
           >
             Home
           </button>
-          <button
-            className={`navbar-link ${currentPage === "products" ? "active" : ""}`}
-            onClick={() => handleNav("products")}
-          >
-            Products
-          </button>
-          <button
-            className={`navbar-link ${currentPage === "wishlist" ? "active" : ""}`}
-            onClick={() => handleNav("wishlist")}
-          >
-            Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ""}
-          </button>
-          <button
-            className={`navbar-link ${currentPage === "orders" ? "active" : ""}`}
-            onClick={() => handleNav("orders")}
-          >
-            Orders
-          </button>
+          {user?.role === "admin" ? (
+            <>
+              <button
+                className={`navbar-link ${currentPage === "admin-wishlisted" ? "active" : ""}`}
+                onClick={() => handleNav("admin-wishlisted")}
+              >
+                Wishlisted
+              </button>
+              <button
+                className={`navbar-link ${currentPage === "admin-ordered" ? "active" : ""}`}
+                onClick={() => handleNav("admin-ordered")}
+              >
+                Ordered
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className={`navbar-link ${currentPage === "products" ? "active" : ""}`}
+                onClick={() => handleNav("products")}
+              >
+                Products
+              </button>
+              <button
+                className={`navbar-link ${currentPage === "wishlist" ? "active" : ""}`}
+                onClick={() => handleNav("wishlist")}
+              >
+                Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ""}
+              </button>
+              <button
+                className={`navbar-link ${currentPage === "orders" ? "active" : ""}`}
+                onClick={() => handleNav("orders")}
+              >
+                Orders
+              </button>
+            </>
+          )}
         </div>
 
         <div className="navbar-search">

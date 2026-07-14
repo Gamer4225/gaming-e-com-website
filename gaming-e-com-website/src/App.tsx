@@ -26,6 +26,8 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
+import AdminMostOrdered from "./pages/AdminMostOrdered";
+import AdminMostWishlisted from "./pages/AdminMostWishlisted";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
 
@@ -36,6 +38,8 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
     { id: "admin-products", label: "Products" },
     { id: "admin-orders", label: "Orders" },
     { id: "admin-users", label: "Users" },
+    { id: "admin-ordered", label: "Most Ordered" },
+    { id: "admin-wishlisted", label: "Most Wishlisted" },
     { id: "admin-password", label: "Change Password" },
   ];
   return (
@@ -97,7 +101,9 @@ function AppContent() {
     currentPage === "admin-products" ||
     currentPage === "admin-orders" ||
     currentPage === "admin-users" ||
-    currentPage === "admin-password";
+    currentPage === "admin-password" ||
+    currentPage === "admin-ordered" ||
+    currentPage === "admin-wishlisted";
 
   const renderPage = () => {
     switch (currentPage) {
@@ -169,6 +175,10 @@ function AppContent() {
         return <AdminUsers setCurrentPage={handleSetCurrentPage} activePage="admin-users" />;
       case "admin-password":
         return <AdminChangePassword setCurrentPage={handleSetCurrentPage} activePage="admin-password" />;
+      case "admin-ordered":
+        return <AdminMostOrdered setCurrentPage={handleSetCurrentPage} activePage="admin-ordered" />;
+      case "admin-wishlisted":
+        return <AdminMostWishlisted setCurrentPage={handleSetCurrentPage} activePage="admin-wishlisted" />;
       default:
         return (
           <Home
