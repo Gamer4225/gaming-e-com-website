@@ -63,7 +63,8 @@ function ensureSchema(db) {
       addressLine2 TEXT,
       city TEXT NOT NULL,
       state TEXT NOT NULL,
-      pincode TEXT NOT NULL
+      pincode TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Processing'
     );
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,6 +96,11 @@ function ensureSchema(db) {
   const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
   if (!cols.includes("role")) {
     db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
+  }
+  // Migration: add status column if missing
+  const ocols = db.prepare("PRAGMA table_info(orders)").all().map(c => c.name);
+  if (!ocols.includes("status")) {
+    db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Processing'");
   }
 }
 
@@ -700,18 +706,25 @@ app.get("/api/admin/stats", adminRequired, (_req, res) => {
     "SELECT category, COUNT(*) as total, SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as outOfStock FROM products GROUP BY category ORDER BY category"
   ).all();
   const recentOrders = db.prepare(
-    "SELECT orderId, grandTotal, placedAt FROM orders ORDER BY id DESC LIMIT 5"
+    "SELECT orderId, grandTotal, placedAt, status FROM orders ORDER BY id DESC LIMIT 5"
   ).all();
-  res.json({ totalProducts, totalOrders, totalUsers, outOfStock, lowStock, totalRevenue, catStats, recentOrders });
+  const recentActivity = db.prepare(
+    "SELECT orderId, grandTotal, placedAt, status, 'order' as type FROM orders ORDER BY id DESC LIMIT 10"
+  ).all();
+  res.json({ totalProducts, totalOrders, totalUsers, outOfStock, lowStock, totalRevenue, catStats, recentOrders, recentActivity });
 });
 
 app.get("/api/admin/products", adminRequired, (req, res) => {
-  const { q } = req.query;
+  const { q, brand } = req.query;
   let sql = "SELECT * FROM products WHERE 1=1";
   const params = {};
   if (q && String(q).trim()) {
     sql += " AND (LOWER(name) LIKE @q OR LOWER(brand) LIKE @q OR LOWER(category) LIKE @q)";
     params.q = "%" + String(q).trim().toLowerCase() + "%";
+  }
+  if (brand && brand !== "All") {
+    sql += " AND brand = @brand";
+    params.brand = String(brand);
   }
   sql += " ORDER BY id ASC";
   res.json(db.prepare(sql).all(params).map(mapProduct));
@@ -774,11 +787,16 @@ app.patch("/api/admin/products/:id/stock", adminRequired, (req, res) => {
   res.json({ id, stock: Number(stock) });
 });
 
-app.get("/api/admin/orders", adminRequired, (_req, res) => {
-  const orders = db.prepare("SELECT * FROM orders ORDER BY id DESC").all();
+app.get("/api/admin/orders", adminRequired, (req, res) => {
+  const { status } = req.query;
+  let sql = "SELECT * FROM orders WHERE 1=1";
+  const params = {};
+  if (status && status !== "All") { sql += " AND status = @st"; params.st = String(status); }
+  sql += " ORDER BY id DESC";
+  const orders = db.prepare(sql).all(params);
   const itemStmt = db.prepare("SELECT * FROM order_items WHERE orderId = ?");
   res.json(orders.map((o) => ({
-    orderId: o.orderId, paymentMethod: o.paymentMethod, subtotal: o.subtotal, gstAmount: o.gstAmount,
+    orderId: o.orderId, status: o.status || "Processing", paymentMethod: o.paymentMethod, subtotal: o.subtotal, gstAmount: o.gstAmount,
     totalSavings: o.totalSavings, grandTotal: o.grandTotal, itemCount: o.itemCount, placedAt: o.placedAt,
     estimatedDelivery: o.estimatedDelivery,
     address: { fullName: o.fullName, phone: o.phone, email: o.email || "", addressLine1: o.addressLine1, addressLine2: o.addressLine2 || "", city: o.city, state: o.state, pincode: o.pincode },
@@ -798,6 +816,38 @@ app.put("/api/admin/change-password", adminRequired, (req, res) => {
   if (!bcrypt.compareSync(String(currentPassword), user.passwordHash)) return res.status(401).json({ error: "Current password is incorrect" });
   db.prepare("UPDATE users SET passwordHash = ? WHERE id = ?").run(bcrypt.hashSync(String(newPassword), 10), req.user.id);
   res.json({ ok: true });
+});
+
+app.get("/api/admin/brands", adminRequired, (_req, res) => {
+  const brands = db.prepare("SELECT DISTINCT brand FROM products ORDER BY brand").all();
+  res.json(brands.map((b) => b.brand));
+});
+
+app.post("/api/admin/bulk-discount", adminRequired, (req, res) => {
+  const { category, discount } = req.body || {};
+  if (!category || discount === undefined || Number(discount) < 0 || Number(discount) > 99) {
+    return res.status(400).json({ error: "Valid category and discount (0-99) required" });
+  }
+  const d = Number(discount);
+  const rows = db.prepare("SELECT id, price, originalPrice FROM products WHERE category = ?").all(String(category));
+  const stmt = db.prepare("UPDATE products SET originalPrice = ?, price = ROUND(? * (100 - ?) / 100), discount = ? WHERE id = ?");
+  let count = 0;
+  for (const r of rows) {
+    const base = r.originalPrice > 0 ? r.originalPrice : r.price;
+    stmt.run(base, base, d, d, r.id);
+    count++;
+  }
+  res.json({ ok: true, updated: count, category, discount: d });
+});
+
+app.patch("/api/admin/orders/:orderId/status", adminRequired, (req, res) => {
+  const { status } = req.body || {};
+  const valid = ["Processing", "Shipped", "Delivered", "Cancelled"];
+  if (!status || !valid.includes(String(status))) return res.status(400).json({ error: "Invalid status. Use: " + valid.join(", ") });
+  const o = db.prepare("SELECT * FROM orders WHERE orderId = ?").get(req.params.orderId);
+  if (!o) return res.status(404).json({ error: "Order not found" });
+  db.prepare("UPDATE orders SET status = ? WHERE orderId = ?").run(String(status), req.params.orderId);
+  res.json({ orderId: req.params.orderId, status: String(status) });
 });
 
 app.post("/api/admin/reseed", adminRequired, (_req, res) => {

@@ -1,11 +1,11 @@
 // App.tsx - Main application entry point
 // Manages page routing and global state
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { CartProvider, useCart } from "./context/CartContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Footer from "./components/Footer/Footer";
@@ -28,6 +28,38 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
+
+const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
+  const { user, logout } = useAuth();
+  const tabs = [
+    { id: "admin-dashboard", label: "Dashboard" },
+    { id: "admin-products", label: "Products" },
+    { id: "admin-orders", label: "Orders" },
+    { id: "admin-users", label: "Users" },
+    { id: "admin-password", label: "Change Password" },
+  ];
+  return (
+    <div className="admin-layout">
+      <div className="admin-topbar">
+        <div className="admin-topbar-left">
+          <span className="admin-topbar-badge">Admin</span>
+          <span className="admin-topbar-title">GameVault Admin Panel</span>
+        </div>
+        <div className="admin-topbar-right">
+          <span>{user?.name}</span>
+          <button className="btn btn-sm btn-sec" onClick={() => { logout(); setCurrentPage("home"); }}>Logout</button>
+          <button className="btn btn-sm btn-sec" onClick={() => setCurrentPage("home")}>← Store</button>
+        </div>
+      </div>
+      <div className="admin-nav">
+        {tabs.map(t => (
+          <button key={t.id} className={`admin-nav-btn ${currentPage === t.id ? "active" : ""}`} onClick={() => setCurrentPage(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {children}
+    </div>
+  );
+};
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -128,15 +160,15 @@ function AppContent() {
       case "signup":
         return <Signup setCurrentPage={handleSetCurrentPage} />;
       case "admin-dashboard":
-        return <AdminDashboard setCurrentPage={handleSetCurrentPage} />;
+        return <AdminDashboard setCurrentPage={handleSetCurrentPage} activePage="admin-dashboard" />;
       case "admin-products":
-        return <AdminProducts setCurrentPage={handleSetCurrentPage} />;
+        return <AdminProducts setCurrentPage={handleSetCurrentPage} activePage="admin-products" />;
       case "admin-orders":
-        return <AdminOrders setCurrentPage={handleSetCurrentPage} />;
+        return <AdminOrders setCurrentPage={handleSetCurrentPage} activePage="admin-orders" />;
       case "admin-users":
-        return <AdminUsers setCurrentPage={handleSetCurrentPage} />;
+        return <AdminUsers setCurrentPage={handleSetCurrentPage} activePage="admin-users" />;
       case "admin-password":
-        return <AdminChangePassword setCurrentPage={handleSetCurrentPage} />;
+        return <AdminChangePassword setCurrentPage={handleSetCurrentPage} activePage="admin-password" />;
       default:
         return (
           <Home
@@ -165,7 +197,15 @@ function AppContent() {
       )}
 
       {isFullWidthPage ? (
-        <div className="page-content-full">{renderPage()}</div>
+        <>
+          {currentPage.startsWith("admin-") ? (
+            <AdminLayout currentPage={currentPage} setCurrentPage={handleSetCurrentPage}>
+              {renderPage()}
+            </AdminLayout>
+          ) : (
+            <div className="page-content-full">{renderPage()}</div>
+          )}
+        </>
       ) : (
         <div className="page-layout">
           <Sidebar

@@ -1,128 +1,97 @@
-// AdminDashboard.tsx — Overview stats, category breakdown, recent orders
-import { useState, useEffect } from "react";
+// AdminDashboard.tsx — Dashboard with stats, activity, category breakdown, bulk discount
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { adminFetch } from "../context/AdminContext";
 import "./Admin.css";
 
-interface AdminStats {
-  totalProducts: number;
-  totalOrders: number;
-  totalUsers: number;
-  outOfStock: number;
-  lowStock: number;
-  totalRevenue: number;
-  catStats: { category: string; total: number; outOfStock: number }[];
-  recentOrders: { orderId: string; grandTotal: number; placedAt: string }[];
-}
+interface Props { setCurrentPage: (p: string) => void; activePage: string }
 
-interface AdminDashboardProps { setCurrentPage: (p: string) => void }
-
-function AdminDashboard({ setCurrentPage }: AdminDashboardProps) {
+function AdminDashboard({ setCurrentPage, activePage }: Props) {
   const { user, token } = useAuth();
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [bulkCat, setBulkCat] = useState("");
+  const [bulkDisc, setBulkDisc] = useState(10);
+  const [bulkMsg, setBulkMsg] = useState("");
+  const [toast, setToast] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!token) return;
-    setLoading(true);
-    adminFetch("/api/admin/stats", token)
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    adminFetch("/api/admin/stats", token).then(r => r.json()).then(setStats).finally(() => setLoading(false));
   }, [token]);
 
-  if (!user || user.role !== "admin") {
-    return <div className="admin-page"><p>Access denied. Admin only.</p></div>;
-  }
+  useEffect(() => { load(); }, [load]);
 
-  if (loading || !stats) return <div className="admin-page"><p>Loading dashboard...</p></div>;
+  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2800); };
+
+  const handleBulkDiscount = async () => {
+    if (!bulkCat) { setBulkMsg("Select a category"); return; }
+    const res = await adminFetch("/api/admin/bulk-discount", token!, { method: "POST", body: JSON.stringify({ category: bulkCat, discount: bulkDisc }) });
+    const d = await res.json();
+    if (res.ok) { showToast(`${d.updated} products in "${d.category}" updated with ${d.discount}% discount`); setBulkMsg(""); load(); }
+    else setBulkMsg(d.error);
+  };
+
+  const categories = stats?.catStats?.map((c: any) => c.category) || [];
+
+  if (!user || user.role !== "admin") return <div className="admin-body"><p>Access denied.</p></div>;
+  if (loading || !stats) return <div className="admin-body"><p>Loading...</p></div>;
 
   return (
-    <div className="admin-page">
-      <button className="admin-back" onClick={() => setCurrentPage("home")}>← Back to Home</button>
-      <h1>Admin Dashboard</h1>
-      <p className="admin-lead">Welcome, {user.name}. Here's your store overview.</p>
+    <div className="admin-body">
+      <h1>Dashboard</h1>
+      <p className="lead">Welcome, {user.name}. Here's your store at a glance.</p>
 
-      <div className="admin-stats">
-        <div className="admin-stat-card">
-          <div className="stat-value">{stats.totalProducts}</div>
-          <div className="stat-label">Total Products</div>
+      <div className="stats-grid">
+        <div className="stat-card"><div className="val">{stats.totalProducts}</div><div className="lbl">Products</div></div>
+        <div className="stat-card"><div className="val">{stats.totalOrders}</div><div className="lbl">Orders</div></div>
+        <div className="stat-card success"><div className="val">₹{(stats.totalRevenue/1000).toFixed(1)}K</div><div className="lbl">Revenue</div></div>
+        <div className="stat-card"><div className="val">{stats.totalUsers}</div><div className="lbl">Users</div></div>
+        <div className="stat-card warn"><div className="val">{stats.lowStock}</div><div className="lbl">Low Stock (≤3)</div></div>
+        <div className="stat-card danger"><div className="val">{stats.outOfStock}</div><div className="lbl">Out of Stock</div></div>
+      </div>
+
+      <div className="card">
+        <h2>⚡ Bulk Discount by Category</h2>
+        <div className="bulk-discount">
+          <div className="field"><label>Category</label>
+            <select value={bulkCat} onChange={(e) => setBulkCat(e.target.value)}>
+              <option value="">-- Select --</option>
+              {categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
+            </select></div>
+          <div className="field"><label>Discount %</label>
+            <input type="number" min="0" max="99" value={bulkDisc} onChange={(e) => setBulkDisc(Number(e.target.value))} /></div>
+          <button className="btn btn-prim" onClick={handleBulkDiscount}>Apply Discount</button>
         </div>
-        <div className="admin-stat-card">
-          <div className="stat-value">{stats.totalOrders}</div>
-          <div className="stat-label">Total Orders</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-value">₹{(stats.totalRevenue / 1000).toFixed(1)}K</div>
-          <div className="stat-label">Total Revenue</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-value">{stats.totalUsers}</div>
-          <div className="stat-label">Registered Users</div>
-        </div>
-        <div className="admin-stat-card warn">
-          <div className="stat-value">{stats.lowStock}</div>
-          <div className="stat-label">Low Stock (≤3)</div>
-        </div>
-        <div className="admin-stat-card danger">
-          <div className="stat-value">{stats.outOfStock}</div>
-          <div className="stat-label">Out of Stock</div>
+        {bulkMsg && <div style={{ color: bulkMsg.includes("updated") ? "#22c55e" : "#ef4444", fontSize: ".82rem", fontWeight: 600 }}>{bulkMsg}</div>}
+      </div>
+
+      <div className="card">
+        <div className="card-header"><h2>Recent Activity</h2></div>
+        <div className="feed">
+          {stats.recentActivity?.map((a: any, i: number) => (
+            <div key={i} className="feed-item">
+              <span className="feed-time">{new Date(a.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+              <span>Order <strong>{a.orderId}</strong> — ₹{a.grandTotal?.toLocaleString("en-IN")}</span>
+              <span className={`badge ${a.status === "Delivered" ? "badge-success" : a.status === "Processing" ? "badge-info" : "badge-warn"}`}>{a.status}</span>
+            </div>
+          ))}
+          {!stats.recentActivity?.length && <div className="feed-item">No activity yet.</div>}
         </div>
       </div>
 
-      {/* Category breakdown */}
-      <div className="admin-section">
+      <div className="card">
         <h2>Category Breakdown</h2>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead><tr><th>Category</th><th>Total</th><th>Out of Stock</th></tr></thead>
-            <tbody>
-              {stats.catStats.map((c) => (
-                <tr key={c.category}>
-                  <td>{c.category}</td>
-                  <td>{c.total}</td>
-                  <td>{c.outOfStock > 0 ? <span className="admin-badge admin-badge-danger">{c.outOfStock}</span> : "0"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="tbl-wrap"><table className="tbl">
+          <thead><tr><th>Category</th><th>Total</th><th>Out of Stock</th></tr></thead>
+          <tbody>{stats.catStats.map((c: any) => (
+            <tr key={c.category}><td>{c.category}</td><td>{c.total}</td>
+              <td>{c.outOfStock > 0 ? <span className="badge badge-danger">{c.outOfStock}</span> : "0"}</td></tr>))}
+          </tbody>
+        </table></div>
       </div>
 
-      {/* Recent orders */}
-      <div className="admin-section">
-        <div className="admin-section-header">
-          <h2>Recent Orders</h2>
-          <button className="admin-btn admin-btn-secondary admin-btn-sm" onClick={() => setCurrentPage("admin-orders")}>View All →</button>
-        </div>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead><tr><th>Order ID</th><th>Amount</th><th>Placed</th></tr></thead>
-            <tbody>
-              {stats.recentOrders.map((o) => (
-                <tr key={o.orderId}>
-                  <td style={{ fontFamily: "monospace" }}>{o.orderId}</td>
-                  <td>₹{o.grandTotal.toLocaleString("en-IN")}</td>
-                  <td>{new Date(o.placedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
-                </tr>
-              ))}
-              {stats.recentOrders.length === 0 && <tr><td colSpan={3} style={{ color: "var(--text-muted)" }}>No orders yet</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Quick links */}
-      <div className="admin-section">
-        <h2>Quick Actions</h2>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button className="admin-btn admin-btn-primary" onClick={() => setCurrentPage("admin-products")}>Manage Products</button>
-          <button className="admin-btn admin-btn-secondary" onClick={() => setCurrentPage("admin-orders")}>View All Orders</button>
-          <button className="admin-btn admin-btn-secondary" onClick={() => setCurrentPage("admin-users")}>View Users</button>
-          <button className="admin-btn admin-btn-secondary" onClick={() => setCurrentPage("admin-password")}>Change Password</button>
-        </div>
-      </div>
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
