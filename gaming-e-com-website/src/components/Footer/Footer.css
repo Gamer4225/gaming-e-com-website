@@ -75,6 +75,7 @@
   background: var(--bg-tertiary); border: 1px solid var(--border-color);
   border-radius: 50%; font-size: 1rem;
   transition: all var(--transition-fast); cursor: pointer;
+  color: var(--text-secondary); text-decoration: none;
 }
 .footer-social-icon:hover {
   background: var(--color-primary); border-color: var(--color-primary);

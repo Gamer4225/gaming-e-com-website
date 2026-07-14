@@ -5,6 +5,7 @@ import { CartProvider, useCart } from "./context/CartContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
+import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Footer from "./components/Footer/Footer";
@@ -18,6 +19,8 @@ import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
 
@@ -50,7 +53,9 @@ function AppContent() {
     currentPage === "contact" ||
     currentPage === "faq" ||
     currentPage === "orders" ||
-    currentPage === "wishlist";
+    currentPage === "wishlist" ||
+    currentPage === "login" ||
+    currentPage === "signup";
 
   const renderPage = () => {
     switch (currentPage) {
@@ -108,6 +113,10 @@ function AppContent() {
             setSelectedCategory={setSelectedCategory}
           />
         );
+      case "login":
+        return <Login setCurrentPage={handleSetCurrentPage} />;
+      case "signup":
+        return <Signup setCurrentPage={handleSetCurrentPage} />;
       default:
         return (
           <Home
@@ -163,15 +172,17 @@ function AppContent() {
 
 function App() {
   return (
-    <ProductCatalogProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <ProductDetailProvider>
-            <AppContent />
-          </ProductDetailProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </ProductCatalogProvider>
+    <AuthProvider>
+      <ProductCatalogProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <ProductDetailProvider>
+              <AppContent />
+            </ProductDetailProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </ProductCatalogProvider>
+    </AuthProvider>
   );
 }
 

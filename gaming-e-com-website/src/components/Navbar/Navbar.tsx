@@ -1,8 +1,9 @@
 // Navbar.tsx - Gaming neon top navigation; cart opens slide-over drawer
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
-import { LogoIcon, SearchIcon, CartIcon } from "../Icons/Icons";
+import { useAuth } from "../../context/AuthContext";
+import { LogoIcon, SearchIcon, CartIcon, UserIcon, LogoutIcon } from "../Icons/Icons";
 import "./Navbar.css";
 
 interface NavbarProps {
@@ -22,8 +23,11 @@ function Navbar({
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [shaking, setShaking] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { totalItems, openCartDrawer } = useCart();
   const { wishlistCount } = useWishlist();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     if (totalItems > 0) {
@@ -32,6 +36,19 @@ function Navbar({
       return () => clearTimeout(timer);
     }
   }, [totalItems]);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
+  }, [userMenuOpen]);
 
   const handleNav = (page: string) => {
     setCurrentPage(page);
@@ -116,6 +133,45 @@ function Navbar({
           {totalItems > 0 && <span className="navbar-cart-badge">{totalItems}</span>}
         </button>
 
+        {/* User / Auth */}
+        {user ? (
+          <div className="navbar-user-menu" ref={userMenuRef}>
+            <button
+              className={`navbar-user-btn ${userMenuOpen ? "active" : ""}`}
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+            >
+              <UserIcon size={16} />
+              <span>{user.name.split(" ")[0]}</span>
+              {user.role === "admin" && <span className="navbar-admin-badge">ADMIN</span>}
+            </button>
+            {userMenuOpen && (
+              <div className="navbar-user-dropdown">
+                <div className="navbar-user-info">
+                  <strong>{user.name}</strong>
+                  <span>{user.email}</span>
+                  {user.role === "admin" && <span className="navbar-role-badge">Admin</span>}
+                </div>
+                <button onClick={() => { handleNav("orders"); setUserMenuOpen(false); }}>
+                  My Orders
+                </button>
+                <button onClick={() => { handleNav("wishlist"); setUserMenuOpen(false); }}>
+                  Wishlist
+                </button>
+                <button className="navbar-logout-btn" onClick={() => { logout(); setUserMenuOpen(false); }}>
+                  <LogoutIcon size={14} /> Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            className={`navbar-link navbar-login-btn ${currentPage === "login" ? "active" : ""}`}
+            onClick={() => handleNav("login")}
+          >
+            Login
+          </button>
+        )}
+
         <button
           className="navbar-hamburger"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -184,6 +240,24 @@ function Navbar({
         >
           FAQ
         </button>
+        {user ? (
+          <>
+            <div className="navbar-mobile-user">
+              {user.role === "admin" && <span className="navbar-admin-badge">ADMIN</span>}
+              <strong>{user.name}</strong>
+            </div>
+            <button className="navbar-link" onClick={() => { logout(); handleNav("home"); }}>
+              Logout
+            </button>
+          </>
+        ) : (
+          <button
+            className={`navbar-link ${currentPage === "login" ? "active" : ""}`}
+            onClick={() => handleNav("login")}
+          >
+            Login / Sign Up
+          </button>
+        )}
       </div>
     </>
   );

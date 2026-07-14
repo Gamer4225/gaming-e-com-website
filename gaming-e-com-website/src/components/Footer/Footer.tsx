@@ -1,5 +1,5 @@
 // Footer.tsx - Working navigation links + store info
-import { LogoIcon } from "../Icons/Icons";
+import { LogoIcon, GitHubIcon } from "../Icons/Icons";
 import "./Footer.css";
 
 interface FooterProps {
@@ -27,10 +27,19 @@ function Footer({ setCurrentPage, setSelectedCategory }: FooterProps) {
             components. Build your dream gaming setup with the best demo deals.
           </p>
           <div className="footer-social">
-            <span className="footer-social-icon" title="Facebook" aria-label="Facebook">f</span>
-            <span className="footer-social-icon" title="X / Twitter" aria-label="Twitter">𝕏</span>
+            <a
+              className="footer-social-icon"
+              href="https://github.com/Gamer4225/gaming-e-com-website"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="GitHub"
+              aria-label="GitHub"
+            >
+              <GitHubIcon size={18} />
+            </a>
             <span className="footer-social-icon" title="Instagram" aria-label="Instagram">◎</span>
             <span className="footer-social-icon" title="YouTube" aria-label="YouTube">▶</span>
+            <span className="footer-social-icon" title="Discord" aria-label="Discord">◈</span>
           </div>
         </div>
 

@@ -86,10 +86,16 @@ function ensureSchema(db) {
       email TEXT NOT NULL UNIQUE,
       phone TEXT,
       passwordHash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'customer',
       createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   `);
+  // Migration: add role column if missing
+  const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!cols.includes("role")) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
+  }
 }
 
 function seedIfEmpty(db) {
@@ -171,13 +177,14 @@ function publicUser(row) {
     name: row.name,
     email: row.email,
     phone: row.phone || "",
+    role: row.role || "customer",
     createdAt: row.createdAt,
   };
 }
 
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name, role: user.role || "customer" },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
@@ -285,6 +292,16 @@ const db = openDb();
 ensureSchema(db);
 const seeded = seedIfEmpty(db);
 console.log(`SQLite ready: ${db.prepare("SELECT COUNT(*) as c FROM products").get().c} products` + (seeded ? ` (seeded ${seeded})` : ""));
+
+// Seed default admin account if no admin exists
+const adminExists = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+if (!adminExists) {
+  const adminHash = bcrypt.hashSync("admin123", 10);
+  db.prepare(
+    "INSERT INTO users (name, email, phone, passwordHash, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run("Admin", "admin@gamevault.com", "", adminHash, "admin", new Date().toISOString());
+  console.log("Default admin seeded: admin@gamevault.com / admin123");
+}
 
 const app = express();
 app.use(cors());
@@ -601,7 +618,7 @@ app.get("/api/orders/:orderId", (req, res) => {
 
 // ---------- Auth ----------
 app.post("/api/auth/signup", (req, res) => {
-  const { name, email, phone, password } = req.body || {};
+  const { name, email, phone, password, role } = req.body || {};
   if (!name || String(name).trim().length < 2) {
     return res.status(400).json({ error: "Enter your full name" });
   }
@@ -615,17 +632,21 @@ app.post("/api/auth/signup", (req, res) => {
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(cleanEmail);
   if (existing) return res.status(409).json({ error: "Email already registered — please login" });
 
+  // Only allow admin role if caller is a logged-in admin
+  const userRole = (role === "admin" && req.user && req.user.role === "admin") ? "admin" : "customer";
+
   const passwordHash = bcrypt.hashSync(String(password), 10);
   const createdAt = new Date().toISOString();
   const info = db
     .prepare(
-      "INSERT INTO users (name, email, phone, passwordHash, createdAt) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO users (name, email, phone, passwordHash, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
     )
     .run(
       String(name).trim(),
       cleanEmail,
       phone ? String(phone).trim() : "",
       passwordHash,
+      userRole,
       createdAt
     );
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
