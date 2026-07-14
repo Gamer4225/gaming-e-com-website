@@ -15,6 +15,7 @@ export interface AuthUser {
   email: string;
   phone?: string;
   role: string;
+  brand?: string;
   createdAt?: string;
 }
 

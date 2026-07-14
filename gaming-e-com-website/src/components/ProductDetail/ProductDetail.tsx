@@ -35,7 +35,7 @@ function ProductDetail({ setCurrentPage }: { setCurrentPage: (page: string) => v
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { products: allProducts } = useProductCatalog();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const blocked = ["admin", "sub-admin", "merchant"].includes(user?.role || "");
   const [qty, setQty] = useState(1);
 
   const related = useMemo(() => {
@@ -222,7 +222,7 @@ function ProductDetail({ setCurrentPage }: { setCurrentPage: (page: string) => v
           </div>
 
           <div className="product-detail-actions">
-            {isAdmin ? (
+            {blocked ? (
               <button className="product-detail-soldout-btn" disabled>
                 🔒 Admin accounts cannot purchase products
               </button>

@@ -79,47 +79,27 @@ function Navbar({
         </div>
 
         <div className="navbar-links">
-          <button
-            className={`navbar-link ${currentPage === "home" ? "active" : ""}`}
-            onClick={() => handleNav("home")}
-          >
-            Home
-          </button>
-          {user?.role === "admin" ? (
+          <button className={`navbar-link ${currentPage === "home" ? "active" : ""}`} onClick={() => handleNav("home")}>Home</button>
+          {user?.role === "admin" || user?.role === "sub-admin" ? (
             <>
-              <button
-                className={`navbar-link ${currentPage === "admin-wishlisted" ? "active" : ""}`}
-                onClick={() => handleNav("admin-wishlisted")}
-              >
-                Wishlisted
-              </button>
-              <button
-                className={`navbar-link ${currentPage === "admin-ordered" ? "active" : ""}`}
-                onClick={() => handleNav("admin-ordered")}
-              >
-                Ordered
-              </button>
+              <button className={`navbar-link ${currentPage === "admin-wishlisted" ? "active" : ""}`} onClick={() => handleNav("admin-wishlisted")}>Wishlisted</button>
+              <button className={`navbar-link ${currentPage === "admin-ordered" ? "active" : ""}`} onClick={() => handleNav("admin-ordered")}>Ordered</button>
+            </>
+          ) : user?.role === "merchant" ? (
+            <>
+              <button className={`navbar-link ${currentPage === "staff-products" ? "active" : ""}`} onClick={() => handleNav("staff-products")}>My Products</button>
+              <button className={`navbar-link ${currentPage === "admin-ordered" ? "active" : ""}`} onClick={() => handleNav("admin-ordered")}>Ordered</button>
+            </>
+          ) : user?.role === "seller" ? (
+            <>
+              <button className={`navbar-link ${currentPage === "products" ? "active" : ""}`} onClick={() => handleNav("products")}>Products</button>
+              <button className={`navbar-link ${currentPage === "staff-products" ? "active" : ""}`} onClick={() => handleNav("staff-products")}>My Listings</button>
             </>
           ) : (
             <>
-              <button
-                className={`navbar-link ${currentPage === "products" ? "active" : ""}`}
-                onClick={() => handleNav("products")}
-              >
-                Products
-              </button>
-              <button
-                className={`navbar-link ${currentPage === "wishlist" ? "active" : ""}`}
-                onClick={() => handleNav("wishlist")}
-              >
-                Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ""}
-              </button>
-              <button
-                className={`navbar-link ${currentPage === "orders" ? "active" : ""}`}
-                onClick={() => handleNav("orders")}
-              >
-                Orders
-              </button>
+              <button className={`navbar-link ${currentPage === "products" ? "active" : ""}`} onClick={() => handleNav("products")}>Products</button>
+              <button className={`navbar-link ${currentPage === "wishlist" ? "active" : ""}`} onClick={() => handleNav("wishlist")}>Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ""}</button>
+              <button className={`navbar-link ${currentPage === "orders" ? "active" : ""}`} onClick={() => handleNav("orders")}>Orders</button>
             </>
           )}
         </div>
@@ -172,14 +152,15 @@ function Navbar({
                   <span>{user.email}</span>
                   {user.role === "admin" && <span className="navbar-role-badge">Admin</span>}
                 </div>
-                {user.role === "admin" && (
-                  <button onClick={() => { handleNav("admin-dashboard"); setUserMenuOpen(false); }} style={{ color: "var(--color-primary)", fontWeight: 700 }}>
-                    ⚙ Admin Panel
+                {(user.role === "admin" || user.role === "sub-admin" || user.role === "merchant" || user.role === "seller") && (
+                  <button onClick={() => { handleNav(user.role === "admin" ? "admin-dashboard" : "staff-dashboard"); setUserMenuOpen(false); }} style={{ color: "var(--color-primary)", fontWeight: 700 }}>
+                    ⚙ {user.role === "admin" ? "Admin Panel" : user.role === "sub-admin" ? "Staff Panel" : user.role === "merchant" ? "Merchant Panel" : "Seller Panel"}
                   </button>
                 )}
-                <button onClick={() => { handleNav("orders"); setUserMenuOpen(false); }}>
-                  My Orders
-                </button>
+                <button onClick={() => { handleNav("orders"); setUserMenuOpen(false); }}>My Orders</button>
+                {user.role === "customer" && (
+                  <button onClick={() => { handleNav("account"); setUserMenuOpen(false); }}>My Account</button>
+                )}
                 <button onClick={() => { handleNav("wishlist"); setUserMenuOpen(false); }}>
                   Wishlist
                 </button>
@@ -274,9 +255,9 @@ function Navbar({
               {user.role === "admin" && <span className="navbar-admin-badge">ADMIN</span>}
               <strong>{user.name}</strong>
             </div>
-            {user.role === "admin" && (
-              <button className="navbar-link" onClick={() => handleNav("admin-dashboard")} style={{ color: "var(--color-primary)" }}>
-                ⚙ Admin Panel
+            {(user.role === "admin" || user.role === "sub-admin" || user.role === "merchant" || user.role === "seller") && (
+              <button className="navbar-link" onClick={() => handleNav(user.role === "admin" ? "admin-dashboard" : "staff-dashboard")} style={{ color: "var(--color-primary)" }}>
+                ⚙ Panel
               </button>
             )}
             <button className="navbar-link" onClick={() => { handleNav("orders"); }}>

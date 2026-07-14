@@ -26,7 +26,7 @@ function ProductCard({ product }: { product: Product }) {
   const { viewProduct } = useProductDetail();
   // Local quantity state for the +/- picker on the card
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const blocked = ["admin", "sub-admin", "merchant"].includes(user?.role || "");
   const [qty, setQty] = useState(1);
   const wished = isInWishlist(product.id);
 
@@ -131,7 +131,7 @@ function ProductCard({ product }: { product: Product }) {
         </div>
 
         {/* Footer actions: hide add-to-cart for admin; show qty picker + add for customers */}
-        {isAdmin ? (
+        {blocked ? (
           <div className="pcard-actions pcard-actions-sold">
             <button className="pcard-add-btn btn-ripple disabled" disabled>🔒 Admin View</button>
           </div>

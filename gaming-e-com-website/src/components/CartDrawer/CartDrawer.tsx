@@ -36,7 +36,7 @@ function CartDrawer({ setCurrentPage, setSelectedCategory }: CartDrawerProps) {
   } = useCart();
   const { products } = useProductCatalog();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const blocked = ["admin", "sub-admin", "merchant"].includes(user?.role || "");
   const { viewProduct } = useProductDetail();
 
   const fbt = useMemo(
@@ -207,7 +207,7 @@ function CartDrawer({ setCurrentPage, setSelectedCategory }: CartDrawerProps) {
                 </div>
               </div>
 
-              {isAdmin ? (
+              {blocked ? (
                 <div style={{ padding: "12px", background: "rgba(255,59,48,.08)", border: "1px solid rgba(255,59,48,.25)", borderRadius: "var(--radius-sm)", fontSize: ".85rem", color: "var(--color-danger)", fontWeight: 600, textAlign: "center" }}>
                   🔒 Admin accounts cannot place orders. Please use a customer account.
                 </div>

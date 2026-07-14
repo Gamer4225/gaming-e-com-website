@@ -26,6 +26,9 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
+import StaffDashboard from "./pages/StaffDashboard";
+import StaffProducts from "./pages/StaffProducts";
+import CustomerAccount from "./pages/CustomerAccount";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
@@ -33,20 +36,38 @@ import "./styles/global.css";
 
 const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
   const { user, logout } = useAuth();
-  const tabs = [
-    { id: "admin-dashboard", label: "Dashboard" },
-    { id: "admin-products", label: "Products" },
-    { id: "admin-orders", label: "Orders" },
-    { id: "admin-users", label: "Users" },
-    { id: "admin-ordered", label: "Most Ordered" },
-    { id: "admin-wishlisted", label: "Most Wishlisted" },
+  const role = user?.role || "customer";
+  const isAdmin = role === "admin";
+  const isSubAdmin = role === "sub-admin";
+  const isMerchant = role === "merchant";
+  const isSeller = role === "seller";
+  const isStaff = ["sub-admin", "merchant", "seller"].includes(role);
+  
+  let tabs: { id: string; label: string }[] = [];
+  if (isAdmin) tabs = [
+    { id: "admin-dashboard", label: "Dashboard" }, { id: "admin-products", label: "Products" },
+    { id: "admin-orders", label: "Orders" }, { id: "admin-users", label: "Users" },
+    { id: "admin-ordered", label: "Most Ordered" }, { id: "admin-wishlisted", label: "Most Wishlisted" },
+    { id: "admin-password", label: "Change Password" },
+  ];
+  else if (isSubAdmin) tabs = [
+    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "Products" },
+    { id: "admin-orders", label: "Orders" }, { id: "admin-ordered", label: "Most Ordered" },
+    { id: "admin-password", label: "Change Password" },
+  ];
+  else if (isMerchant) tabs = [
+    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Products" },
+    { id: "admin-ordered", label: "Most Ordered" }, { id: "admin-password", label: "Change Password" },
+  ];
+  else if (isSeller) tabs = [
+    { id: "staff-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Listings" },
     { id: "admin-password", label: "Change Password" },
   ];
   return (
     <div className="admin-layout">
       <div className="admin-topbar">
         <div className="admin-topbar-left">
-          <span className="admin-topbar-badge">Admin</span>
+          <span className="admin-topbar-badge">{role === "admin" ? "Admin" : role === "sub-admin" ? "Sub-Admin" : role === "merchant" ? "Merchant" : "Seller"}</span>
           <span className="admin-topbar-title">GameVault Admin Panel</span>
         </div>
         <div className="admin-topbar-right">
@@ -103,7 +124,10 @@ function AppContent() {
     currentPage === "admin-users" ||
     currentPage === "admin-password" ||
     currentPage === "admin-ordered" ||
-    currentPage === "admin-wishlisted";
+    currentPage === "admin-wishlisted" ||
+    currentPage === "staff-dashboard" ||
+    currentPage === "staff-products" ||
+    currentPage === "account";
 
   const renderPage = () => {
     switch (currentPage) {
@@ -179,6 +203,12 @@ function AppContent() {
         return <AdminMostOrdered setCurrentPage={handleSetCurrentPage} activePage="admin-ordered" />;
       case "admin-wishlisted":
         return <AdminMostWishlisted setCurrentPage={handleSetCurrentPage} activePage="admin-wishlisted" />;
+      case "staff-dashboard":
+        return <StaffDashboard setCurrentPage={handleSetCurrentPage} />;
+      case "staff-products":
+        return <StaffProducts setCurrentPage={handleSetCurrentPage} />;
+      case "account":
+        return <CustomerAccount setCurrentPage={handleSetCurrentPage} />;
       default:
         return (
           <Home

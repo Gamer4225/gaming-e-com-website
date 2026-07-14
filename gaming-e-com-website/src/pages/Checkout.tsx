@@ -40,7 +40,7 @@ const emptyAddress: ShippingAddress = {
 function Checkout({ setCurrentPage }: CheckoutProps) {
   const { cartItems, totalItems, totalPrice, placeOrder } = useCart();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const blocked = ["admin", "sub-admin", "merchant"].includes(user?.role || "");
   const [address, setAddress] = useState<ShippingAddress>(emptyAddress);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
@@ -61,7 +61,7 @@ function Checkout({ setCurrentPage }: CheckoutProps) {
     );
   }
 
-  if (isAdmin) {
+  if (blocked) {
     return (
       <div className="checkout-page">
         <div className="checkout-empty">

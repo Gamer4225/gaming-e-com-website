@@ -43,7 +43,8 @@ function ensureSchema(db) {
       description TEXT NOT NULL,
       image TEXT NOT NULL,
       featured INTEGER NOT NULL DEFAULT 0,
-      specs TEXT
+      specs TEXT,
+      sellerId INTEGER
     );
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +65,8 @@ function ensureSchema(db) {
       city TEXT NOT NULL,
       state TEXT NOT NULL,
       pincode TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Processing'
+      status TEXT NOT NULL DEFAULT 'Processing',
+      userId INTEGER
     );
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +90,8 @@ function ensureSchema(db) {
       phone TEXT,
       passwordHash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'customer',
+      brand TEXT,
+      sellerId TEXT,
       createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -190,13 +194,14 @@ function publicUser(row) {
     email: row.email,
     phone: row.phone || "",
     role: row.role || "customer",
+    brand: row.brand || "",
     createdAt: row.createdAt,
   };
 }
 
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role || "customer" },
+    { id: user.id, email: user.email, name: user.name, role: user.role || "customer", brand: user.brand || "" },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
@@ -227,6 +232,34 @@ function authRequired(req, res, next) {
 function adminRequired(req, res, next) {
   authRequired(req, res, () => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    next();
+  });
+}
+
+function subAdminRequired(req, res, next) {
+  authRequired(req, res, () => {
+    if (req.user.role !== "sub-admin" && req.user.role !== "admin") return res.status(403).json({ error: "Sub-admin access required" });
+    next();
+  });
+}
+
+function staffRequired(req, res, next) {
+  authRequired(req, res, () => {
+    if (!["admin", "sub-admin", "merchant", "seller"].includes(req.user.role)) return res.status(403).json({ error: "Staff access required" });
+    next();
+  });
+}
+
+function merchantRequired(req, res, next) {
+  authRequired(req, res, () => {
+    if (req.user.role !== "merchant") return res.status(403).json({ error: "Merchant access required" });
+    next();
+  });
+}
+
+function sellerRequired(req, res, next) {
+  authRequired(req, res, () => {
+    if (req.user.role !== "seller") return res.status(403).json({ error: "Seller access required" });
     next();
   });
 }
@@ -317,8 +350,8 @@ const adminExists = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 
 if (!adminExists) {
   const adminHash = bcrypt.hashSync("admin123", 10);
   db.prepare(
-    "INSERT INTO users (name, email, phone, passwordHash, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run("Admin", "admin@gamevault.com", "", adminHash, "admin", new Date().toISOString());
+    "INSERT INTO users (name, email, phone, passwordHash, role, brand, sellerId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run("Admin", "admin@gamevault.com", "", adminHash, "admin", "", "", new Date().toISOString());
   console.log("Default admin seeded: admin@gamevault.com / admin123");
 }
 
@@ -401,7 +434,7 @@ app.post("/api/orders", (req, res) => {
     ) VALUES (
       @orderId, @paymentMethod, @subtotal, @gstAmount, @totalSavings, @grandTotal, @itemCount,
       @placedAt, @estimatedDelivery, @fullName, @phone, @email, @addressLine1, @addressLine2,
-      @city, @state, @pincode
+      @city, @state, @pincode, @userId, @userId
     )
   `);
   const insertItem = db.prepare(`
@@ -483,6 +516,7 @@ app.post("/api/orders", (req, res) => {
         1000 + Math.random() * 9000
       )}`;
       const placedAt = new Date().toISOString();
+      const orderUserId = req.user ? req.user.id : null;
 
       insertOrder.run({
         orderId,
@@ -502,6 +536,7 @@ app.post("/api/orders", (req, res) => {
         city: String(address.city).trim(),
         state: String(address.state).trim(),
         pincode: String(address.pincode).trim(),
+        userId: orderUserId,
       });
 
       for (const item of orderItems) {
@@ -651,14 +686,19 @@ app.post("/api/auth/signup", (req, res) => {
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(cleanEmail);
   if (existing) return res.status(409).json({ error: "Email already registered — please login" });
 
-  // Only allow admin role if caller is a logged-in admin
-  const userRole = (role === "admin" && req.user && req.user.role === "admin") ? "admin" : "customer";
+  // Role gating: admin can create any role; others default to customer
+  let userRole = "customer";
+  if (req.user && req.user.role === "admin" && role && ["admin", "sub-admin", "merchant", "seller", "customer"].includes(String(role))) {
+    userRole = String(role);
+  }
+  const userBrand = req.user && req.user.role === "admin" && role === "merchant" ? (req.body.brand || "") : "";
+  const userSellerId = userRole === "seller" ? "S" + Date.now().toString(36).toUpperCase() : null;
 
   const passwordHash = bcrypt.hashSync(String(password), 10);
   const createdAt = new Date().toISOString();
   const info = db
     .prepare(
-      "INSERT INTO users (name, email, phone, passwordHash, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO users (name, email, phone, passwordHash, role, brand, sellerId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .run(
       String(name).trim(),
@@ -666,6 +706,8 @@ app.post("/api/auth/signup", (req, res) => {
       phone ? String(phone).trim() : "",
       passwordHash,
       userRole,
+      userBrand,
+      userSellerId,
       createdAt
     );
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
@@ -878,6 +920,155 @@ app.get("/api/admin/most-wishlisted", adminRequired, (_req, res) => {
     ORDER BY w.count DESC, p.rating DESC LIMIT 30
   `).all();
   res.json(rows);
+});
+
+// Staff-role overview stats (scoped by role)
+app.get("/api/staff/stats", staffRequired, (req, res) => {
+  let productFilter = "";
+  let orderFilter = "";
+  const params: any = {};
+  if (req.user.role === "merchant") {
+    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+    productFilter = " AND brand = @brand";
+    params.brand = u?.brand || "";
+  }
+  if (req.user.role === "seller") {
+    productFilter = " AND sellerId = @sid";
+    params.sid = req.user.id;
+  }
+  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products WHERE 1=1" + productFilter).get(params).c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0" + productFilter).get(params).c;
+  const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND stock <= 3" + productFilter).get(params).c;
+  res.json({ totalProducts, outOfStock, lowStock });
+});
+
+// Staff products (scoped)
+app.get("/api/staff/products", staffRequired, (req, res) => {
+  let filter = "";
+  const params: any = {};
+  if (req.user.role === "merchant") {
+    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+    filter = " AND brand = @brand";
+    params.brand = u?.brand || "";
+  }
+  if (req.user.role === "seller") {
+    filter = " AND sellerId = @sid";
+    params.sid = req.user.id;
+  }
+  const { q } = req.query;
+  if (q && String(q).trim()) {
+    filter += " AND (LOWER(name) LIKE @q OR LOWER(brand) LIKE @q)";
+    params.q = "%" + String(q).trim().toLowerCase() + "%";
+  }
+  res.json(db.prepare("SELECT * FROM products WHERE 1=1" + filter + " ORDER BY id ASC").all(params).map(mapProduct));
+});
+
+// Staff add product (merchant = their brand, seller = auto pre-owned + sellerId)
+app.post("/api/staff/products", staffRequired, (req, res) => {
+  const b = req.body || {};
+  if (!b.name || !b.brand || !b.category || !b.price || !b.description || !b.image) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+  const maxId = db.prepare("SELECT MAX(id) as m FROM products").get().m || 0;
+  const newId = maxId + 1;
+  let brand = String(b.brand);
+  let condition = String(b.condition || "New");
+  let sellerId = null;
+  if (req.user.role === "merchant") {
+    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+    brand = u?.brand || brand;
+  }
+  if (req.user.role === "seller") {
+    condition = "Pre-Owned";
+    sellerId = req.user.id;
+  }
+  db.prepare("INSERT INTO products (id,name,brand,category,price,originalPrice,discount,condition,warranty,rating,stock,description,image,featured,specs,sellerId) VALUES (@id,@n,@b,@c,@p,@op,@d,@cd,@w,@r,@s,@desc,@img,@f,@sp,@sid)").run({
+    id: newId, n: String(b.name).trim(), b: brand, c: String(b.category).trim(),
+    p: Number(b.price), op: Number(b.originalPrice || b.price), d: Number(b.discount || 0),
+    cd: condition, w: String(b.warranty || "1 Year"), r: Number(b.rating || 4),
+    s: Number(b.stock || 1), desc: String(b.description), img: String(b.image),
+    f: 0, sp: b.specs ? JSON.stringify(b.specs) : null, sid: sellerId,
+  });
+  res.status(201).json(mapProduct(db.prepare("SELECT * FROM products WHERE id = ?").get(newId)));
+});
+
+// Staff update stock
+app.patch("/api/staff/products/:id/stock", staffRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const { stock } = req.body || {};
+  const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Product not found" });
+  // Seller can only touch their own
+  if (req.user.role === "seller" && row.sellerId !== req.user.id) return res.status(403).json({ error: "Not your listing" });
+  if (req.user.role === "merchant") { const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id); if (row.brand !== u?.brand) return res.status(403).json({ error: "Not your brand" }); }
+  db.prepare("UPDATE products SET stock = ? WHERE id = ?").run(Number(stock), id);
+  res.json({ id, stock: Number(stock) });
+});
+
+// Staff delete product
+app.delete("/api/staff/products/:id", staffRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Product not found" });
+  if (req.user.role === "seller" && row.sellerId !== req.user.id) return res.status(403).json({ error: "Not your listing" });
+  if (req.user.role === "merchant") { const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id); if (row.brand !== u?.brand) return res.status(403).json({ error: "Not your brand" }); }
+  db.prepare("DELETE FROM products WHERE id = ?").run(id);
+  res.json({ ok: true, deleted: id });
+});
+
+// Most ordered (scoped for merchant/seller)
+app.get("/api/staff/most-ordered", staffRequired, (req, res) => {
+  let filter = "";
+  const params: any = {};
+  if (req.user.role === "merchant") {
+    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+    filter = " AND oi.brand = @brand";
+    params.brand = u?.brand || "";
+  }
+  if (req.user.role === "seller") {
+    filter = " AND p.sellerId = @sid";
+    params.sid = req.user.id;
+  }
+  const rows = db.prepare("SELECT oi.productId as id, oi.name, oi.brand, oi.image, p.category, p.stock, p.price, SUM(oi.quantity) as orderCount, COUNT(DISTINCT oi.orderId) as timesOrdered FROM order_items oi JOIN products p ON p.id = oi.productId WHERE 1=1" + filter + " GROUP BY oi.productId ORDER BY orderCount DESC LIMIT 30").all(params);
+  res.json(rows);
+});
+
+// Staff dashboard (reuse existing admin dashboard data but scoped)
+app.get("/api/staff/dashboard", staffRequired, (req, res) => {
+  let productFilter = "";
+  const params: any = {};
+  if (req.user.role === "merchant") {
+    const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
+    productFilter = " AND p.brand = @brand";
+    params.brand = u?.brand || "";
+  }
+  if (req.user.role === "seller") {
+    productFilter = " AND p.sellerId = @sid";
+    params.sid = req.user.id;
+  }
+  const totalProducts = db.prepare("SELECT COUNT(*) as c FROM products p WHERE 1=1" + productFilter).get(params).c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products p WHERE stock = 0" + productFilter).get(params).c;
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(o.grandTotal),0) as c FROM orders o JOIN order_items oi ON oi.orderId = o.orderId JOIN products p ON p.id = oi.productId WHERE 1=1" + productFilter).get(params).c;
+  const recentOrders = db.prepare("SELECT DISTINCT o.orderId, o.grandTotal, o.placedAt, o.status FROM orders o JOIN order_items oi ON oi.orderId = o.orderId JOIN products p ON p.id = oi.productId WHERE 1=1" + productFilter + " ORDER BY o.id DESC LIMIT 5").all(params);
+  res.json({ totalProducts, outOfStock, totalRevenue, recentOrders });
+});
+
+// Customer profile + change password
+app.put("/api/customer/profile", authRequired, (req, res) => {
+  const { name, phone } = req.body || {};
+  if (name) db.prepare("UPDATE users SET name = ? WHERE id = ?").run(String(name).trim(), req.user.id);
+  if (phone !== undefined) db.prepare("UPDATE users SET phone = ? WHERE id = ?").run(String(phone).trim(), req.user.id);
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
+  res.json({ user: publicUser(user) });
+});
+
+app.put("/api/customer/change-password", authRequired, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword || String(newPassword).length < 6) return res.status(400).json({ error: "Current and new password (min 6 chars) required" });
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
+  if (!bcrypt.compareSync(String(currentPassword), user.passwordHash)) return res.status(401).json({ error: "Current password is incorrect" });
+  db.prepare("UPDATE users SET passwordHash = ? WHERE id = ?").run(bcrypt.hashSync(String(newPassword), 10), req.user.id);
+  res.json({ ok: true });
 });
 
 app.get("/api/admin/brands", adminRequired, (_req, res) => {
