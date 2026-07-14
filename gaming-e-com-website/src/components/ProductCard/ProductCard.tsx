@@ -130,7 +130,12 @@ function ProductCard({ product }: { product: Product }) {
           {hasDiscount && <span className="pcard-save">Save ₹{formatPrice(savings)}</span>}
         </div>
 
-        {/* +/− only for new in-stock items. Pre-owned is unique (qty 1); sold-out has no qty. */}
+        {/* Footer actions: hide add-to-cart for admin; show qty picker + add for customers */}
+        {isAdmin ? (
+          <div className="pcard-actions pcard-actions-sold">
+            <button className="pcard-add-btn btn-ripple disabled" disabled>🔒 Admin View</button>
+          </div>
+        ) : (
         <div className={`pcard-actions ${soldOut || isPreOwned || cartFull ? "pcard-actions-sold" : ""}`}>
           {!soldOut && !isPreOwned && !cartFull && (
             <div className="pcard-qty-picker">
@@ -155,9 +160,10 @@ function ProductCard({ product }: { product: Product }) {
             onClick={handleAdd}
             disabled={soldOut || cartFull}
           >
-            {isAdmin ? "🔒 Admin View" : soldOut ? (isPreOwned ? "🔴 Sold" : "🔴 Sold Out") : cartFull ? "✓ In Cart" : "🛒 Add"}
+            {soldOut ? (isPreOwned ? "🔴 Sold" : "🔴 Sold Out") : cartFull ? "✓ In Cart" : "🛒 Add"}
           </button>
         </div>
+        )}
       </div>
     </div>
   );
