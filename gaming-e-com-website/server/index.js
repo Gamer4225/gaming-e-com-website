@@ -926,7 +926,7 @@ app.get("/api/admin/most-wishlisted", adminRequired, (_req, res) => {
 app.get("/api/staff/stats", staffRequired, (req, res) => {
   let productFilter = "";
   let orderFilter = "";
-  const params: any = {};
+  const params = {};
   if (req.user.role === "merchant") {
     const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
     productFilter = " AND brand = @brand";
@@ -945,7 +945,7 @@ app.get("/api/staff/stats", staffRequired, (req, res) => {
 // Staff products (scoped)
 app.get("/api/staff/products", staffRequired, (req, res) => {
   let filter = "";
-  const params: any = {};
+  const params = {};
   if (req.user.role === "merchant") {
     const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
     filter = " AND brand = @brand";
@@ -1036,7 +1036,7 @@ app.delete("/api/staff/products/:id", staffRequired, (req, res) => {
 // Most ordered (scoped for merchant/seller)
 app.get("/api/staff/most-ordered", staffRequired, (req, res) => {
   let filter = "";
-  const params: any = {};
+  const params = {};
   if (req.user.role === "merchant") {
     const u = db.prepare("SELECT brand FROM users WHERE id = ?").get(req.user.id);
     filter = " AND oi.brand = @brand";
