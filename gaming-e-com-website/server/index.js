@@ -502,7 +502,7 @@ app.get("/api/meta", (_req, res) => {
 });
 
 // Place order — stock is reduced only here (after "payment")
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", authOptional, (req, res) => {
   const { items, address, paymentMethod } = req.body || {};
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "Cart is empty" });
@@ -524,7 +524,7 @@ app.post("/api/orders", (req, res) => {
     ) VALUES (
       @orderId, @paymentMethod, @subtotal, @gstAmount, @totalSavings, @grandTotal, @itemCount,
       @placedAt, @estimatedDelivery, @fullName, @phone, @email, @addressLine1, @addressLine2,
-      @city, @state, @pincode, @userId, @userId
+      @city, @state, @pincode, @userId
     )
   `);
   const insertItem = db.prepare(`

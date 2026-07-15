@@ -1,12 +1,12 @@
-// WishlistContext.tsx — Persist wishlist in localStorage + sync to server
+// WishlistContext.tsx — Simple direct API calls (like Reviews)
+// Every toggle hits the server immediately. No debounce, no sync loop.
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { API_BASE } from "./ProductCatalogContext";
-import { useAuth } from "./AuthContext";
 
 interface WishlistContextValue {
   wishlistIds: number[];
   isInWishlist: (id: number) => boolean;
-  toggleWishlist: (id: number, name?: string) => void;
+  toggleWishlist: (id: number) => void;
   removeFromWishlist: (id: number) => void;
   clearWishlist: () => void;
   wishlistCount: number;
@@ -22,50 +22,25 @@ export function useWishlist(): WishlistContextValue {
 }
 
 function loadIds(): number[] {
-  try {
-    const raw = localStorage.getItem(WISHLIST_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as number[];
-    return Array.isArray(parsed) ? parsed.filter((n) => typeof n === "number") : [];
-  } catch { return []; }
+  try { const r = localStorage.getItem(WISHLIST_KEY); return r ? JSON.parse(r) : []; }
+  catch { return []; }
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlistIds, setWishlistIds] = useState<number[]>(() => loadIds());
-  const { token } = useAuth();
 
-  useEffect(() => {
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds));
-  }, [wishlistIds]);
+  // Persist to localStorage
+  useEffect(() => { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds)); }, [wishlistIds]);
 
-  // Sync wishlist to server immediately on every change
-  useEffect(() => {
-    // Always sync, even for guest users (without token)
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    fetch(`${API_BASE}/api/wishlist/sync`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ ids: wishlistIds }),
-    }).catch(() => {});
-  }, [wishlistIds, token]);
-
-  const toggleWishlist = useCallback(
-    (id: number) => {
-      setWishlistIds((prev) => {
-        const updated = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-        // Immediately sync this single toggle to the server
-        if (token) {
-          fetch(`${API_BASE}/api/wishlist/${id}`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => {});
-        }
-        return updated;
-      });
-    },
-    [token]
-  );
+  // Toggle: add/remove from local state AND immediately call server (no conditions)
+  const toggleWishlist = useCallback((id: number) => {
+    setWishlistIds((prev) => {
+      const updated = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      // Fire and forget — server call, same pattern as Reviews
+      fetch(`${API_BASE}/api/wishlist/${id}`, { method: "POST" }).catch(() => {});
+      return updated;
+    });
+  }, []);
 
   const removeFromWishlist = useCallback((id: number) => {
     setWishlistIds((prev) => prev.filter((x) => x !== id));
@@ -79,9 +54,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WishlistContext.Provider
-      value={{ wishlistIds, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: wishlistIds.length }}
-    >
+    <WishlistContext.Provider value={{ wishlistIds, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: wishlistIds.length }}>
       {children}
     </WishlistContext.Provider>
   );
