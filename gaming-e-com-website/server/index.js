@@ -101,6 +101,48 @@ function ensureSchema(db) {
       count INTEGER NOT NULL DEFAULT 1,
       lastAdded TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productId INTEGER NOT NULL,
+      userId INTEGER,
+      userName TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      verified INTEGER NOT NULL DEFAULT 0,
+      helpfulVotes INTEGER NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    );
+    CREATE TABLE IF NOT EXISTS coupons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      discountType TEXT NOT NULL DEFAULT 'percentage',
+      discountValue INTEGER NOT NULL,
+      minCart INTEGER NOT NULL DEFAULT 0,
+      maxUses INTEGER,
+      currentUses INTEGER NOT NULL DEFAULT 0,
+      category TEXT,
+      expiresAt TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      createdAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER,
+      userName TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      createdAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_reviews_productId ON reviews(productId);
+    CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
+    CREATE INDEX IF NOT EXISTS idx_activity_logs_createdAt ON activity_logs(createdAt);
   `);
   // Migration: add role column if missing
   const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
@@ -109,6 +151,11 @@ function ensureSchema(db) {
   }
   // Migration: add status column if missing
   const ocols = db.prepare("PRAGMA table_info(orders)").all().map(c => c.name);
+  // New tables migration
+  try { db.exec("CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, productId INTEGER NOT NULL, userId INTEGER, userName TEXT NOT NULL, rating INTEGER NOT NULL, comment TEXT, status TEXT DEFAULT 'pending', verified INTEGER DEFAULT 0, helpfulVotes INTEGER DEFAULT 0, createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, discountType TEXT DEFAULT 'percentage', discountValue INTEGER, minCart INTEGER DEFAULT 0, maxUses INTEGER, currentUses INTEGER DEFAULT 0, category TEXT, expiresAt TEXT, status TEXT DEFAULT 'active', createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, userName TEXT NOT NULL, action TEXT NOT NULL, details TEXT, createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"); } catch {}
   if (!ocols.includes("status")) {
     db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Processing'");
   }
@@ -358,6 +405,12 @@ if (!adminExists) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+
+function logActivity(db, userId, userName, action, details) {
+  db.prepare("INSERT INTO activity_logs (userId, userName, action, details, createdAt) VALUES (?,?,?,?,?)").run(
+    userId || null, userName || "System", action, details || "", new Date().toISOString()
+  );
+}
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -1110,6 +1163,126 @@ app.put("/api/customer/change-password", authRequired, (req, res) => {
   if (!bcrypt.compareSync(String(currentPassword), user.passwordHash)) return res.status(401).json({ error: "Current password is incorrect" });
   db.prepare("UPDATE users SET passwordHash = ? WHERE id = ?").run(bcrypt.hashSync(String(newPassword), 10), req.user.id);
   res.json({ ok: true });
+});
+
+// ---------- Reviews ----------
+app.get("/api/admin/reviews", adminRequired, (req, res) => {
+  const { status, productId } = req.query;
+  let sql = "SELECT r.*, p.name as productName FROM reviews r LEFT JOIN products p ON p.id = r.productId WHERE 1=1";
+  const params: Record<string, any> = {};
+  if (status && status !== "All") { sql += " AND r.status = @status"; params.status = String(status); }
+  if (productId) { sql += " AND r.productId = @pid"; params.pid = Number(productId); }
+  sql += " ORDER BY r.id DESC LIMIT 200";
+  res.json(db.prepare(sql).all(params));
+});
+
+app.patch("/api/admin/reviews/:id/status", adminRequired, (req, res) => {
+  const { status } = req.body || {};
+  if (!["approved", "hidden", "deleted"].includes(String(status))) return res.status(400).json({ error: "Invalid status" });
+  db.prepare("UPDATE reviews SET status = ? WHERE id = ?").run(String(status), Number(req.params.id));
+  logActivity(db, req.user.id, req.user.name, "review_status", `Review #${req.params.id} → ${status}`);
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/reviews/seed", adminRequired, (_req, res) => {
+  const count = db.prepare("SELECT COUNT(*) as c FROM reviews").get().c;
+  if (count > 0) return res.json({ ok: true, msg: `${count} reviews already exist` });
+  const prods = db.prepare("SELECT id, name FROM products ORDER BY RANDOM() LIMIT 40").all();
+  const users = db.prepare("SELECT id, name FROM users LIMIT 10").all();
+  const stmt = db.prepare("INSERT INTO reviews (productId, userId, userName, rating, comment, status, verified, createdAt) VALUES (?,?,?,?,?,?,?,?)");
+  const now = new Date();
+  let n = 0;
+  for (const p of prods) {
+    const u = users[Math.floor(Math.random() * users.length)];
+    const rating = Math.floor(Math.random() * 3) + 3; // 3-5 stars
+    stmt.run(p.id, u.id, u.name, rating, `Great ${p.name}! Works perfectly for gaming.`, "approved", 1, new Date(now - Math.random() * 30*86400000).toISOString());
+    n++;
+  }
+  res.json({ ok: true, seeded: n });
+});
+
+// ---------- Coupons ----------
+app.get("/api/admin/coupons", adminRequired, (req, res) => {
+  const { status } = req.query;
+  let sql = "SELECT * FROM coupons WHERE 1=1";
+  const params: Record<string, any> = {};
+  if (status && status !== "All") { sql += " AND status = @s"; params.s = String(status); }
+  sql += " ORDER BY id DESC";
+  res.json(db.prepare(sql).all(params));
+});
+
+app.post("/api/admin/coupons", adminRequired, (req, res) => {
+  const b = req.body || {};
+  if (!b.code || !b.discountValue) return res.status(400).json({ error: "Code and discountValue required" });
+  const exists = db.prepare("SELECT id FROM coupons WHERE code = ?").get(String(b.code).toUpperCase());
+  if (exists) return res.status(409).json({ error: "Coupon code already exists" });
+  db.prepare("INSERT INTO coupons (code, discountType, discountValue, minCart, maxUses, category, expiresAt, status, createdAt) VALUES (?,?,?,?,?,?,?,?,?)").run(
+    String(b.code).toUpperCase(), String(b.discountType || "percentage"), Number(b.discountValue),
+    Number(b.minCart || 0), b.maxUses ? Number(b.maxUses) : null, b.category || null,
+    b.expiresAt || null, "active", new Date().toISOString()
+  );
+  logActivity(db, req.user.id, req.user.name, "coupon_created", `Coupon ${String(b.code).toUpperCase()} created`);
+  res.status(201).json({ ok: true });
+});
+
+app.patch("/api/admin/coupons/:id", adminRequired, (req, res) => {
+  const { status } = req.body || {};
+  const c = db.prepare("SELECT * FROM coupons WHERE id = ?").get(Number(req.params.id));
+  if (!c) return res.status(404).json({ error: "Coupon not found" });
+  db.prepare("UPDATE coupons SET status = ? WHERE id = ?").run(String(status || "active"), c.id);
+  logActivity(db, req.user.id, req.user.name, "coupon_updated", `Coupon ${c.code} → ${status}`);
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/coupons/:id", adminRequired, (req, res) => {
+  const c = db.prepare("SELECT * FROM coupons WHERE id = ?").get(Number(req.params.id));
+  if (!c) return res.status(404).json({ error: "Not found" });
+  db.prepare("DELETE FROM coupons WHERE id = ?").run(c.id);
+  res.json({ ok: true });
+});
+
+// ---------- Activity Logs ----------
+app.get("/api/admin/activity-logs", adminRequired, (req, res) => {
+  const { q } = req.query;
+  let sql = "SELECT * FROM activity_logs WHERE 1=1";
+  const params: Record<string, any> = {};
+  if (q) { sql += " AND (LOWER(action) LIKE @q OR LOWER(details) LIKE @q OR LOWER(userName) LIKE @q)"; params.q = "%" + String(q).toLowerCase() + "%"; }
+  sql += " ORDER BY id DESC LIMIT 200";
+  res.json(db.prepare(sql).all(params));
+});
+
+// ---------- Settings ----------
+app.get("/api/admin/settings", adminRequired, (_req, res) => {
+  const rows = db.prepare("SELECT * FROM settings").all();
+  const obj: Record<string, string> = {};
+  rows.forEach((r: any) => { obj[r.key] = r.value; });
+  res.json(obj);
+});
+
+app.put("/api/admin/settings", adminRequired, (req, res) => {
+  const data = req.body || {};
+  const stmt = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
+  for (const [k, v] of Object.entries(data)) {
+    stmt.run(String(k), String(v));
+  }
+  logActivity(db, req.user.id, req.user.name, "settings_updated", "Settings updated");
+  res.json({ ok: true });
+});
+
+// ---------- Reports ----------
+app.get("/api/admin/reports/sales", adminRequired, (_req, res) => {
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(grandTotal),0) as c FROM orders").get().c;
+  const totalOrders = db.prepare("SELECT COUNT(*) as c FROM orders").get().c;
+  const avgOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+  const byCategory = db.prepare("SELECT oi.brand as category, COUNT(DISTINCT oi.orderId) as orders, SUM(oi.quantity) as units, SUM(oi.price * oi.quantity) as revenue FROM order_items oi GROUP BY oi.brand ORDER BY revenue DESC LIMIT 15").all();
+  const byDay = db.prepare("SELECT DATE(placedAt) as day, COUNT(*) as orders, COALESCE(SUM(grandTotal),0) as revenue FROM orders WHERE placedAt > date('now','-30 days') GROUP BY DATE(placedAt) ORDER BY day").all();
+  res.json({ totalRevenue, totalOrders, avgOrder, byCategory, byDay });
+});
+
+// =========== Categories Management ===========
+app.get("/api/admin/categories", adminRequired, (_req, res) => {
+  const rows = db.prepare("SELECT category as name, COUNT(*) as productCount, SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as oos, SUM(price*stock) as inventoryValue, MAX(rating) as topRating FROM products GROUP BY category ORDER BY productCount DESC").all();
+  res.json(rows);
 });
 
 app.get("/api/admin/brands", adminRequired, (_req, res) => {

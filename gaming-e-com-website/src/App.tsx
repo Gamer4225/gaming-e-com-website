@@ -32,6 +32,13 @@ import StaffProducts from "./pages/StaffProducts";
 import CustomerAccount from "./pages/CustomerAccount";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
+import AdminCategories from "./pages/AdminCategories";
+import AdminInventory from "./pages/AdminInventory";
+import AdminReviews from "./pages/AdminReviews";
+import AdminCoupons from "./pages/AdminCoupons";
+import AdminActivityLogs from "./pages/AdminActivityLogs";
+import AdminReports from "./pages/AdminReports";
+import AdminSettings from "./pages/AdminSettings";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
 
@@ -49,10 +56,17 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
   if (isAdmin) tabs.push(
     { id: "admin-dashboard", label: "Dashboard", icon: "📊" },
     { id: "admin-products", label: "Products", icon: "📦" },
+    { id: "admin-categories", label: "Categories", icon: "🏷️" },
+    { id: "admin-inventory", label: "Inventory", icon: "🏭" },
     { id: "admin-orders", label: "Orders", icon: "📋" },
-    { id: "admin-users", label: "Users", icon: "👥" },
+    { id: "admin-customers", label: "Customers", icon: "👥" },
     { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
-    { id: "admin-wishlisted", label: "Most Wishlisted", icon: "💜" },
+    { id: "admin-wishlisted", label: "Wishlist Analytics", icon: "💜" },
+    { id: "admin-reviews", label: "Reviews", icon: "⭐" },
+    { id: "admin-coupons", label: "Coupons", icon: "🎫" },
+    { id: "admin-reports", label: "Reports", icon: "📈" },
+    { id: "admin-logs", label: "Activity Logs", icon: "📝" },
+    { id: "admin-settings", label: "Settings", icon: "⚙️" },
     { id: "admin-password", label: "Change Password", icon: "🔑" },
   );
   else if (isSubAdmin) tabs.push(
@@ -108,7 +122,7 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
         <div className="admin-topbar">
           <div><div className="breadcrumb">{roleLabel} <span>› {currentTab?.label || "Dashboard"}</span></div></div>
           <div className="admin-topbar-right">
-            <button className="btn-back" onClick={() => setCurrentPage("home")}>← Back to Store</button>
+            <button className="btn-back" onClick={() => setCurrentPage("home")}>← Back to Dashboard</button>
           </div>
         </div>
         {children}
@@ -191,6 +205,14 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "admin-users": return <AdminUsers setCurrentPage={go} />;
       case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
       case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
+      case "admin-categories": return <AdminCategories setCurrentPage={go} />;
+      case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
+      case "admin-customers": return <AdminUsers setCurrentPage={go} />;
+      case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
+      case "admin-coupons": return <AdminCoupons setCurrentPage={go} />;
+      case "admin-logs": return <AdminActivityLogs setCurrentPage={go} />;
+      case "admin-reports": return <AdminReports setCurrentPage={go} />;
+      case "admin-settings": return <AdminSettings setCurrentPage={go} />;
       case "admin-password": return <AdminChangePassword setCurrentPage={go} />;
       case "sub-dashboard": return <SubAdminDashboard setCurrentPage={go} />;
       case "merchant-dashboard": return <MerchantDashboard setCurrentPage={go} />;
@@ -220,7 +242,7 @@ function AppRouter() {
     const role = user.role;
     if (!role || role === "customer" || role === "seller") return;
     // Admin, sub-admin, merchant → never show customer pages
-    if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-")) {
+    if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-") && currentPage !== "login" && currentPage !== "signup") {
       const dash = role === "admin" ? "admin-dashboard" : role === "sub-admin" ? "sub-dashboard" : role === "merchant" ? "merchant-dashboard" : "seller-dashboard";
       setCurrentPage(dash);
     }
