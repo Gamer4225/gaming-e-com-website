@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { adminFetch } from "../context/AdminContext";
+import { api } from "../services/api";
 import "./Admin.css";
 
 interface Props { setCurrentPage: (p: string) => void }
@@ -13,7 +13,7 @@ function AdminDashboard({ setCurrentPage }: Props) {
 
   const load = useCallback(() => {
     if (!token) return;
-    adminFetch("/api/admin/stats", token).then(r => r.json()).then(setD);
+    api.adminStats(token).then(setD);
   }, [token]);
 
   useEffect(() => { load(); }, [load]);
