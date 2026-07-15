@@ -3,34 +3,32 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
-interface LoginProps {
-  setCurrentPage: (page: string) => void;
-}
+interface LoginProps { setCurrentPage: (page: string) => void }
 
 function Login({ setCurrentPage }: LoginProps) {
   const { login, user } = useAuth();
-
-  // If already logged in, skip the login form — staff go to dashboard, customers to home
-  if (user) {
-    const staffRoles = ["admin", "sub-admin", "merchant"];
-    const dash = staffRoles.includes(user.role) ? user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : "merchant-dashboard" : "home";
-    setCurrentPage(dash);
-    return <div className="auth-page"><p style={{textAlign:"center",color:"var(--text-secondary)",padding:40}}>Already logged in as {user.name}.<br/>Redirecting...</p></div>;
-  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Redirect staff users immediately once user state is available
+  useEffect(() => {
+    if (!user) return;
+    const staffRoles = ["admin", "sub-admin", "merchant"];
+    if (staffRoles.includes(user.role)) {
+      const dash = user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : "merchant-dashboard";
+      setCurrentPage(dash);
+    }
+  }, [user, setCurrentPage]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      const result: any = await login(email.trim(), password);
-      setCurrentPage(result?.role === "admin" || result?.role === "sub-admin" || result?.role === "merchant" || result?.role === "seller" ? (result?.role === "admin" ? "admin-dashboard" : result?.role === "sub-admin" ? "sub-dashboard" : result?.role === "merchant" ? "merchant-dashboard" : "seller-dashboard") : "home");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      await login(email.trim(), password);
+      // redirect handled by useEffect above once user state populates
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -40,9 +38,7 @@ function Login({ setCurrentPage }: LoginProps) {
 
   return (
     <div className="auth-page">
-      <button className="auth-back" onClick={() => setCurrentPage("home")}>
-        ← Back to Home
-      </button>
+      <button className="auth-back" onClick={() => setCurrentPage("home")}>← Back to Home</button>
       <div className="auth-card">
         <h1>Welcome back</h1>
         <p className="auth-lead">Log in to GameVault to track orders and checkout faster.</p>
@@ -51,25 +47,11 @@ function Login({ setCurrentPage }: LoginProps) {
           {error && <div className="auth-error">{error}</div>}
           <label className="auth-field">
             <span>Email</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
+            <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
           </label>
           <label className="auth-field">
             <span>Password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-              required
-            />
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" required />
           </label>
           <button className="auth-submit" type="submit" disabled={submitting}>
             {submitting ? "Logging in…" : "Log In"}
@@ -78,13 +60,10 @@ function Login({ setCurrentPage }: LoginProps) {
 
         <p className="auth-switch">
           New here?
-          <button type="button" onClick={() => setCurrentPage("signup")}>
-            Create an account
-          </button>
+          <button type="button" onClick={() => setCurrentPage("signup")}>Create an account</button>
         </p>
         <p className="auth-note">
-          Accounts are stored in the GameVault SQLite database on the mini backend. Demo only —
-          use a password you don&apos;t use elsewhere.
+          Accounts are stored in the GameVault SQLite database on the mini backend. Demo only — use a password you don&apos;t use elsewhere.
         </p>
       </div>
     </div>
