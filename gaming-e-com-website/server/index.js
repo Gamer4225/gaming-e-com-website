@@ -1199,7 +1199,7 @@ app.get("/api/admin/customers", adminRequired, (_req, res) => {
 // All accounts with role filter
 app.get("/api/admin/accounts", adminRequired, (req, res) => {
   const { role } = req.query;
-  let sql = "SELECT id, name, email, phone, role, brand, createdAt FROM users WHERE 1=1";
+  let sql = "SELECT id, name, email, phone, role, brand, createdAt FROM users WHERE role != 'admin'";
   const params = {};
   if (role && role !== "All") { sql += " AND role = @role"; params.role = String(role); }
   sql += " ORDER BY id ASC";
