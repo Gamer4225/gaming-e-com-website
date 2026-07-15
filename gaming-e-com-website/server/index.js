@@ -1169,7 +1169,7 @@ app.put("/api/customer/change-password", authRequired, (req, res) => {
 app.get("/api/admin/reviews", adminRequired, (req, res) => {
   const { status, productId } = req.query;
   let sql = "SELECT r.*, p.name as productName FROM reviews r LEFT JOIN products p ON p.id = r.productId WHERE 1=1";
-  const params: Record<string, any> = {};
+  const params = {};
   if (status && status !== "All") { sql += " AND r.status = @status"; params.status = String(status); }
   if (productId) { sql += " AND r.productId = @pid"; params.pid = Number(productId); }
   sql += " ORDER BY r.id DESC LIMIT 200";
@@ -1205,7 +1205,7 @@ app.post("/api/admin/reviews/seed", adminRequired, (_req, res) => {
 app.get("/api/admin/coupons", adminRequired, (req, res) => {
   const { status } = req.query;
   let sql = "SELECT * FROM coupons WHERE 1=1";
-  const params: Record<string, any> = {};
+  const params = {};
   if (status && status !== "All") { sql += " AND status = @s"; params.s = String(status); }
   sql += " ORDER BY id DESC";
   res.json(db.prepare(sql).all(params));
@@ -1245,7 +1245,7 @@ app.delete("/api/admin/coupons/:id", adminRequired, (req, res) => {
 app.get("/api/admin/activity-logs", adminRequired, (req, res) => {
   const { q } = req.query;
   let sql = "SELECT * FROM activity_logs WHERE 1=1";
-  const params: Record<string, any> = {};
+  const params = {};
   if (q) { sql += " AND (LOWER(action) LIKE @q OR LOWER(details) LIKE @q OR LOWER(userName) LIKE @q)"; params.q = "%" + String(q).toLowerCase() + "%"; }
   sql += " ORDER BY id DESC LIMIT 200";
   res.json(db.prepare(sql).all(params));
@@ -1255,7 +1255,7 @@ app.get("/api/admin/activity-logs", adminRequired, (req, res) => {
 app.get("/api/admin/settings", adminRequired, (_req, res) => {
   const rows = db.prepare("SELECT * FROM settings").all();
   const obj: Record<string, string> = {};
-  rows.forEach((r: any) => { obj[r.key] = r.value; });
+  rows.forEach((r) => { obj[r.key] = r.value; });
   res.json(obj);
 });
 
