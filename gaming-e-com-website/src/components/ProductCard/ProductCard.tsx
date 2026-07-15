@@ -4,7 +4,6 @@ import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useProductDetail, type Product } from "../../context/ProductDetailContext";
 import { useAuth } from "../../context/AuthContext";
-import { useCompare } from "../../context/CompareContext";
 import ProductImage from "../ProductImage/ProductImage";
 import "./ProductCard.css";
 
@@ -56,7 +55,7 @@ function ProductCard({ product }: { product: Product }) {
       <div className="pcard-img-wrap">
         <ProductImage src={product.image} alt={product.name} />
         <button type="button" className={`pcard-wish ${wished ? "active" : ""}`} title={wished ? "Remove from wishlist" : "Add to wishlist"} onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}>{wished ? "♥" : "♡"}</button>
-        <button type="button" className={`pcard-compare ${comparing ? "active" : ""}`} title={comparing ? "Remove from compare" : "Compare"} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} aria-label="Compare">⚖</button>
+        <button type="button" className="pcard-compare" title="Compare" onClick={(e) => { e.stopPropagation(); }} aria-label="Compare">⚖</button>
         <div className="pcard-badges">
           {product.condition === "New" && !soldOut && (
             <span className="pcard-badge pcard-badge-new">NEW</span>

@@ -145,8 +145,7 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "admin-dashboard": return <AdminDashboard setCurrentPage={go} />;
       case "admin-products": return <ProductManagement setCurrentPage={go} />;
       case "admin-orders": return <AdminOrders setCurrentPage={go} />;
-      case "admin-users": return <AdminUsers setCurrentPage={go} />;
-      case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
+            case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
       case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
       case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
       case "admin-categories": return <AdminCategories setCurrentPage={go} />;

@@ -1,6 +1,5 @@
 // CompareProducts.tsx — Side-by-side gaming hardware comparison
 import { useCompare } from "../context/CompareContext";
-import { useAuth } from "../context/AuthContext";
 import ProductImage from "../components/ProductImage/ProductImage";
 import "./StaticPages.css";
 import "./Compare.css";
@@ -10,7 +9,7 @@ interface Props { setCurrentPage: (p: string) => void }
 const SPEC_KEYS = ["Type","Cores / Threads","Base / Boost Clock","Cache","Socket","Architecture","TDP","Memory Support","VRAM","CUDA Cores","Memory Interface","Ray Tracing","Capacity","Speed","Latency","RGB","Form Factor","Resolution","Refresh Rate","Panel Type","Response Time","Connectivity","Sensor","DPI","Switch Type","Backlight","Wireless","Battery Life","Driver Size","Frequency Response","Microphone","Material","Weight Capacity","Recline","Armrests","Dimensions","Surface Area","Height Adjustable","Cable Management","Screen Size","Processor","Storage","Battery","GPU","Weight"];
 
 function CompareProducts({ setCurrentPage }: Props) {
-  const { compareProducts, removeCompare, clearCompare, compareIds } = useCompare();
+  const { compareProducts, removeCompare, clearCompare } = useCompare();
 
   if (compareProducts.length === 0) {
     return (

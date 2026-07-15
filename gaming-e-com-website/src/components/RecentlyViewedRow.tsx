@@ -5,7 +5,7 @@ import "./RecentlyViewed.css";
 
 interface Props { setCurrentPage: (p: string) => void }
 
-function RecentlyViewedRow({ setCurrentPage }: Props) {
+function RecentlyViewedRow(_props: Props) {
   const { viewedProducts, viewedIds } = useRecentlyViewed();
   if (viewedIds.length === 0) return null;
 
