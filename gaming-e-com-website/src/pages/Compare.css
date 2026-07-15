@@ -1,0 +1,13 @@
+.compare-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 1px; background: var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
+.compare-col { background: var(--bg-card); }
+.compare-labels { background: var(--bg-secondary); font-weight: 600; }
+.compare-labels .compare-header { background: var(--bg-secondary); }
+.compare-header { padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 160px; justify-content: center; position: relative; }
+.compare-header img { width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm); }
+.compare-name { font-size: .8rem; font-weight: 600; text-align: center; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.compare-remove { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); color: var(--danger); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .7rem; }
+.compare-spec { padding: 10px 14px; font-size: .78rem; border-bottom: 1px solid var(--border-color); min-height: 42px; display: flex; align-items: center; }
+.compare-spec.highlight { font-weight: 700; color: var(--color-primary); font-size: .9rem; }
+.compare-col:last-child .compare-spec { border-bottom: none; }
+.compare-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); }
+@media (max-width: 768px) { .compare-grid { grid-auto-columns: minmax(160px, 1fr); } }

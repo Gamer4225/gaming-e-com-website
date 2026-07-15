@@ -3,6 +3,8 @@ import { useState, useEffect, type ReactNode } from "react";
 import { CartProvider, useCart } from "./context/CartContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
+import { CompareProvider } from "./context/CompareContext";
+import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { getPermissions, isStaffRole } from "./context/PermissionContext";
@@ -31,6 +33,7 @@ import SubAdminDashboard from "./pages/SubAdminDashboard";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import CustomerAccount from "./pages/CustomerAccount";
+import CompareProducts from "./pages/CompareProducts";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
 import AdminAccounts from "./pages/AdminAccounts";
@@ -87,7 +90,8 @@ function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelec
 
   const isFull = currentPage === "home" || currentPage === "checkout" || currentPage === "order-success" ||
     currentPage === "about" || currentPage === "contact" || currentPage === "faq" ||
-    currentPage === "orders" || currentPage === "wishlist" || currentPage === "login" || currentPage === "signup" || currentPage === "account";
+    currentPage === "orders" || currentPage === "wishlist" || currentPage === "login" || currentPage === "signup" || currentPage === "account" ||
+    currentPage === "compare";
 
   const render = () => {
     switch (currentPage) {
@@ -103,6 +107,7 @@ function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelec
       case "wishlist": return <Wishlist setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
       case "login": return <Login setCurrentPage={go} />;
       case "signup": return <Signup setCurrentPage={go} />;
+      case "compare": return <CompareProducts setCurrentPage={go} />;
       case "account": return <CustomerAccount setCurrentPage={go} />;
       default: return <Home setCurrentPage={go} setSelectedCategory={setSelectedCategory} setSearchQuery={setSearchQuery} />;
     }
@@ -215,9 +220,11 @@ function App() {
       <ProductCatalogProvider>
         <CartProvider>
           <WishlistProvider>
+            <CompareProvider><RecentlyViewedProvider>
             <ProductDetailProvider>
               <AppRouter />
             </ProductDetailProvider>
+          </RecentlyViewedProvider></CompareProvider>
           </WishlistProvider>
         </CartProvider>
       </ProductCatalogProvider>
