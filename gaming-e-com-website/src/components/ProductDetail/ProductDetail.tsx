@@ -7,6 +7,8 @@ import { useWishlist } from "../../context/WishlistContext";
 import { useProductDetail, type Product } from "../../context/ProductDetailContext";
 import ProductImage from "../ProductImage/ProductImage";
 import ProductCard from "../ProductCard/ProductCard";
+import ReviewForm from "../ReviewForm";
+import ProductReviews from "../ProductReviews";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
 import "./ProductDetail.css";
 
@@ -310,6 +312,8 @@ function ProductDetail({ setCurrentPage }: { setCurrentPage: (page: string) => v
           </div>
         </section>
       )}
+      <ProductReviews productId={product.id} />
+      <ReviewForm productId={product.id} productName={product.name} onSubmitted={() => {}} />
     </div>
   );
 }

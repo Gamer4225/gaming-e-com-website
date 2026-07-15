@@ -1012,6 +1012,25 @@ app.get("/api/wishlist", (req, res) => {
   res.json({ ids });
 });
 
+// Customer review submission (anyone can submit)
+app.post("/api/reviews", (req, res) => {
+  const { productId, rating, comment, userName } = req.body || {};
+  if (!productId || !rating || !userName) return res.status(400).json({ error: "productId, rating, userName required" });
+  const product = db.prepare("SELECT id FROM products WHERE id = ?").get(Number(productId));
+  if (!product) return res.status(404).json({ error: "Product not found" });
+  db.prepare("INSERT INTO reviews (productId, userId, userName, rating, comment, status, verified, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+    Number(productId), req.user?.id || null, String(userName), Number(rating), String(comment || ""), "pending", 0, new Date().toISOString()
+  );
+  logActivity(db, req.user?.id, req.user?.name || String(userName), "review_submitted", `Review for product #${productId} - ${rating} stars`);
+  res.status(201).json({ ok: true, msg: "Review submitted for moderation" });
+});
+
+// Get reviews for a specific product (public)
+app.get("/api/reviews/:productId", (req, res) => {
+  const rows = db.prepare("SELECT id, userName, rating, comment, status, verified, createdAt FROM reviews WHERE productId = ? AND status = 'approved' ORDER BY id DESC LIMIT 50").all(Number(req.params.productId));
+  res.json(rows);
+});
+
 app.post("/api/wishlist/:id", (req, res) => {
   const productId = Number(req.params.id);
   const product = db.prepare("SELECT id FROM products WHERE id = ?").get(productId);
