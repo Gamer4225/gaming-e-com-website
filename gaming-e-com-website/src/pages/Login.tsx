@@ -8,20 +8,19 @@ interface LoginProps {
 }
 
 function Login({ setCurrentPage }: LoginProps) {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+
+  // If already logged in, skip the login form entirely
+  if (user) {
+    const dash = user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : user.role === "merchant" ? "merchant-dashboard" : user.role === "seller" ? "seller-dashboard" : "home";
+    setTimeout(() => setCurrentPage(dash), 0);
+    return <div className="auth-page"><p style={{textAlign:"center",color:"var(--text-secondary)"}}>Already logged in as {user.name}. Redirecting...</p></div>;
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const { user } = useAuth();
 
-  // Already logged in? Redirect staff to dashboard
-  useEffect(() => {
-    if (user && ["admin","sub-admin","merchant"].includes(user.role)) {
-      const dash = user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : "merchant-dashboard";
-      setCurrentPage(dash);
-    }
-  }, [user]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
