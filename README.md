@@ -251,3 +251,7 @@ Database file: `server/gamevault.db`
 **GameVault** — Academic Mini Project  
 © 2026 GameVault  
 [GitHub Repository](https://github.com/Gamer4225/gaming-e-com-website)
+
+<img width="1917" height="902" alt="image" src="https://github.com/user-attachments/assets/afe5b077-272f-46c4-8aa2-ed204349a39c" />
+<img width="1917" height="867" alt="image" src="https://github.com/user-attachments/assets/46752945-1c84-4437-a6d3-97684ba17348" />
+https://www.behance.net/gallery/198525953/E-Commerce-Admin-Web-App/modules/1124739089
