@@ -31,7 +31,7 @@ function AdminAccounts({ setCurrentPage }: Props) {
       <div className="stats-row">
         {["sub-admin","merchant","seller","customer"].map(r => (
           <div key={r} className="stat-card" onClick={() => setRoleFilter(roleFilter === r ? "All" : r)} style={{cursor:"pointer",border: roleFilter === r ? "2px solid var(--brand-purple)" : ""}}>
-            <div className={`icon-circle ${r==="sub-admin"?"blue":r==="merchant"?"orange":r==="seller"?"green":"blue"}`}>
+            <div className={`icon-circle ${r==="sub-admin"?"purple":r==="merchant"?"orange":r==="seller"?"green":"blue"}`}>
               {r==="sub-admin"?"🔧":r==="merchant"?"🏪":r==="seller"?"🛒":"👤"}
             </div>
             <div className="stat-info">

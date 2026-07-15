@@ -297,7 +297,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch(`${API_BASE}/api/orders`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify(payload),
         });
         const data = await res.json();
