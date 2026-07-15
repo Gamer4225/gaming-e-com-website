@@ -10,11 +10,12 @@ interface LoginProps {
 function Login({ setCurrentPage }: LoginProps) {
   const { login, user } = useAuth();
 
-  // If already logged in, skip the login form entirely
+  // If already logged in, skip the login form — staff go to dashboard, customers to home
   if (user) {
-    const dash = user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : user.role === "merchant" ? "merchant-dashboard" : user.role === "seller" ? "seller-dashboard" : "home";
-    setTimeout(() => setCurrentPage(dash), 0);
-    return <div className="auth-page"><p style={{textAlign:"center",color:"var(--text-secondary)"}}>Already logged in as {user.name}. Redirecting...</p></div>;
+    const staffRoles = ["admin", "sub-admin", "merchant"];
+    const dash = staffRoles.includes(user.role) ? user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : "merchant-dashboard" : "home";
+    setCurrentPage(dash);
+    return <div className="auth-page"><p style={{textAlign:"center",color:"var(--text-secondary)",padding:40}}>Already logged in as {user.name}.<br/>Redirecting...</p></div>;
   }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

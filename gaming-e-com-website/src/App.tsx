@@ -8,7 +8,7 @@ import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { getPermissions, isStaffRole } from "./context/PermissionContext";
+import { getPermissions } from "./context/PermissionContext";
 import { getAdminTabs } from "./config/adminRouteConfig";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
@@ -178,29 +178,21 @@ function AppRouter() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
-  const perms = getPermissions((user?.role || "customer") as any);
-  const isStaff = isStaffRole(user?.role || "");
 
-  // Not logged in → customer store (DEFAULT — Home page first)
-  if (!user) {
-    return (
-      <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
-        selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-        searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-    );
+  // Staff-only pages trigger AdminPanel
+  const isStaffPage = currentPage.startsWith("admin-") || currentPage.startsWith("sub-") || currentPage.startsWith("merchant-") || currentPage.startsWith("seller-") || currentPage.startsWith("staff-");
+
+  // Staff pages → admin panel
+  if (isStaffPage) {
+    return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
   }
 
-  // Seller or Customer → customer store always
-  if (perms.canPurchase) {
-    return (
-      <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
-        selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-        searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-    );
-  }
-
-  // Admin, Sub-Admin, Merchant → admin panel only
-  return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+  // Everything else (home, products, wishlist, orders, login, signup, etc.) → CustomerStore
+  return (
+    <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
+      selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+      searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+  );
 }
 
 function App() {

@@ -48,12 +48,7 @@ export function useAuth(): AuthContextValue {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(USER_KEY);
-      return raw ? (JSON.parse(raw) as AuthUser) : null;
-    } catch { return null; }
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
   const [loginJustNow, setLoginJustNow] = useState(false);
@@ -79,24 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const boot = async () => {
-      if (!token) { setLoading(false); return; }
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error("session expired");
-        const data = await res.json();
-        setUser(data.user);
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-      } catch {
-        logout();
-      } finally {
-        setLoading(false);
+    // Restore user from localStorage instantly (no server check)
+    // Staff users (admin/sub-admin/merchant) stay logged in but see Home page
+    // They click Login → redirected to dashboard via Login.tsx
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (stored && stored.role) {
+          setUser(stored);
+        }
       }
-    };
-    void boot();
-  }, []); // Only run on mount
+    } catch {}
+    setLoading(false);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
