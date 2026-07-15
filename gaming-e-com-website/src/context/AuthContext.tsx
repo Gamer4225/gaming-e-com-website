@@ -48,23 +48,14 @@ export function useAuth(): AuthContextValue {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(USER_KEY);
-      return raw ? (JSON.parse(raw) as AuthUser) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginJustNow, setLoginJustNow] = useState(false);
 
   const persist = (nextToken: string, nextUser: AuthUser) => {
     setToken(nextToken);
     setUser(nextUser);
-    localStorage.setItem(TOKEN_KEY, nextToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     // Clear cart if logging in as admin (admins cannot purchase)
     if (nextUser.role === "admin") {
       localStorage.removeItem("gamevault_cart");
@@ -77,32 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     setLoginJustNow(false);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
   }, []);
 
   useEffect(() => {
-    const boot = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error("session expired");
-        const data = await res.json();
-        setUser(data.user);
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-      } catch {
-        logout();
-      } finally {
-        setLoading(false);
-      }
-    };
-    void boot();
-  }, [token, logout]);
+    setLoading(false);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -127,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Signup failed");
       persist(data.token, data.user);
+      setLoginJustNow(true);
       return data.user;
     },
     []
