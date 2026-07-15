@@ -693,6 +693,7 @@ app.get("/api/orders", (_req, res) => {
   res.json(
     orders.map((o) => ({
       orderId: o.orderId,
+      status: o.status || "Processing",
       paymentMethod: o.paymentMethod,
       subtotal: o.subtotal,
       gstAmount: o.gstAmount,
