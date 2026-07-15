@@ -38,18 +38,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds));
   }, [wishlistIds]);
 
-  // Sync wishlist to server on every change (debounced)
+  // Sync wishlist to server immediately on every change
   useEffect(() => {
-    if (!token) return;
-    const ids = wishlistIds;
-    const timer = setTimeout(() => {
-      fetch(`${API_BASE}/api/wishlist/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids }),
-      }).catch(() => {});
-    }, 300);
-    return () => clearTimeout(timer);
+    // Always sync, even for guest users (without token)
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    fetch(`${API_BASE}/api/wishlist/sync`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ ids: wishlistIds }),
+    }).catch(() => {});
   }, [wishlistIds, token]);
 
   const toggleWishlist = useCallback(

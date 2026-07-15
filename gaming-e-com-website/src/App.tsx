@@ -176,20 +176,20 @@ function AppRouter() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const { user } = useAuth();
+  const { user, loginJustNow, clearLoginJustNow } = useAuth();
   const perms = getPermissions((user?.role || "customer") as any);
   const isStaff = isStaffRole(user?.role || "");
 
-  // Staff roles → redirect to dashboard if not already on staff pages
+  // Only redirect to dashboard AFTER explicit login/signup, not on page load
   useEffect(() => {
+    if (!loginJustNow) return;
+    clearLoginJustNow();
     if (!user || !isStaff) return;
-    if (perms.canPurchase) return; // seller can use store
-    if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-") && currentPage !== "login" && currentPage !== "signup") {
-      setCurrentPage(perms.dashboardPage);
-    }
-  }, [user, currentPage]);
+    if (perms.canPurchase) return;
+    setCurrentPage(perms.dashboardPage);
+  }, [loginJustNow, user]);
 
-  // Not logged in → customer store
+  // Not logged in → customer store (this is the default - shows Home first)
   if (!user) {
     return (
       <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}

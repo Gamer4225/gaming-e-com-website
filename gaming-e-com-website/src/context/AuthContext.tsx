@@ -32,6 +32,8 @@ interface AuthContextValue {
   }) => Promise<void>;
   logout: () => void;
   authHeader: () => Record<string, string>;
+  loginJustNow: boolean;
+  clearLoginJustNow: () => void;
 }
 
 const TOKEN_KEY = "gamevault_token";
@@ -56,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
+  const [loginJustNow, setLoginJustNow] = useState(false);
 
   const persist = (nextToken: string, nextUser: AuthUser) => {
     setToken(nextToken);
@@ -68,9 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const clearLoginJustNow = useCallback(() => setLoginJustNow(false), []);
+
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    setLoginJustNow(false);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }, []);
@@ -107,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || "Login failed");
     persist(data.token, data.user);
+    setLoginJustNow(true);
     return data.user;
   }, []);
 
@@ -131,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, login, signup, logout, authHeader }}
+      value={{ user, token, loading, login, signup, logout, authHeader, loginJustNow, clearLoginJustNow }}
     >
       {children}
     </AuthContext.Provider>
