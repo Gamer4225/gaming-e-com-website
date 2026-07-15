@@ -166,6 +166,25 @@ function ensureSchema(db) {
   if (!ocols.includes("status")) {
     db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Processing'");
   }
+  if (!ocols.includes("userId")) {
+    try { db.exec("ALTER TABLE orders ADD COLUMN userId INTEGER"); } catch {}
+  }
+
+  // Users table migrations
+  const ucols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!ucols.includes("brand")) { try { db.exec("ALTER TABLE users ADD COLUMN brand TEXT"); } catch {} }
+  if (!ucols.includes("sellerId")) { try { db.exec("ALTER TABLE users ADD COLUMN sellerId TEXT"); } catch {} }
+
+  // Products table migrations
+  const pcols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+  if (!pcols.includes("sellerId")) { try { db.exec("ALTER TABLE products ADD COLUMN sellerId INTEGER"); } catch {} }
+  if (!pcols.includes("sku")) { try { db.exec("ALTER TABLE products ADD COLUMN sku TEXT"); } catch {} }
+  if (!pcols.includes("slug")) { try { db.exec("ALTER TABLE products ADD COLUMN slug TEXT"); } catch {} }
+  if (!pcols.includes("weight")) { try { db.exec("ALTER TABLE products ADD COLUMN weight REAL DEFAULT 0"); } catch {} }
+  if (!pcols.includes("images")) { try { db.exec("ALTER TABLE products ADD COLUMN images TEXT"); } catch {} }
+  if (!pcols.includes("stockReserved")) { try { db.exec("ALTER TABLE products ADD COLUMN stockReserved INTEGER DEFAULT 0"); } catch {} }
+  if (!pcols.includes("stockIncoming")) { try { db.exec("ALTER TABLE products ADD COLUMN stockIncoming INTEGER DEFAULT 0"); } catch {} }
+  if (!pcols.includes("totalSold")) { try { db.exec("ALTER TABLE products ADD COLUMN totalSold INTEGER DEFAULT 0"); } catch {} }
 }
 
 function seedIfEmpty(db) {
