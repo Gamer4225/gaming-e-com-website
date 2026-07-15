@@ -6,6 +6,7 @@ export interface AdminRoute { id: string; label: string; icon: string; permissio
 
 const ALL_ROUTES: AdminRoute[] = [
   { id: "admin-products", label: "Products", icon: "📦", permission: "canViewAllProducts" },
+  { id: "admin-inventory", label: "Inventory", icon: "🏭", permission: "canViewAllProducts" },
   { id: "admin-categories", label: "Categories", icon: "🏷️", permission: "canViewCategories" },
   { id: "admin-brands", label: "Brands", icon: "🏷️", permission: "canViewAllProducts" },
   { id: "admin-orders", label: "Orders", icon: "📋", permission: "canViewAllOrders" },

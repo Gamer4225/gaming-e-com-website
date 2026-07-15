@@ -44,7 +44,14 @@ function ensureSchema(db) {
       image TEXT NOT NULL,
       featured INTEGER NOT NULL DEFAULT 0,
       specs TEXT,
-      sellerId INTEGER
+      sellerId INTEGER,
+      sku TEXT,
+      slug TEXT,
+      weight REAL DEFAULT 0,
+      images TEXT,
+      stockReserved INTEGER DEFAULT 0,
+      stockIncoming INTEGER DEFAULT 0,
+      totalSold INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -228,6 +235,13 @@ function mapProduct(row) {
     description: row.description,
     image: row.image,
     featured: !!row.featured,
+    sku: row.sku || "",
+    slug: row.slug || "",
+    weight: row.weight || 0,
+    images: row.images || "",
+    stockReserved: row.stockReserved || 0,
+    stockIncoming: row.stockIncoming || 0,
+    totalSold: row.totalSold || 0,
     ...(specs ? { specs } : {}),
   };
 }
@@ -525,6 +539,8 @@ app.post("/api/orders", (req, res) => {
           });
         }
         resolved.push({ product, qty });
+      // Track reserved + sold
+      db.prepare("UPDATE products SET stockReserved = stockReserved + ?, totalSold = totalSold + ? WHERE id = ?").run(qty, qty, id);
       }
 
       // Deduct stock only after validation (payment moment)
@@ -1309,6 +1325,20 @@ app.put("/api/admin/settings", adminRequired, (req, res) => {
 });
 
 // ---------- Reports ----------
+// Inventory overview (with reserved/available/incoming)
+app.get("/api/admin/inventory-stats", adminRequired, (_req, res) => {
+  const totalStock = db.prepare("SELECT COALESCE(SUM(stock),0) as c FROM products").get().c;
+  const totalReserved = db.prepare("SELECT COALESCE(SUM(stockReserved),0) as c FROM products").get().c;
+  const totalIncoming = db.prepare("SELECT COALESCE(SUM(stockIncoming),0) as c FROM products").get().c;
+  const totalSold = db.prepare("SELECT COALESCE(SUM(totalSold),0) as c FROM products").get().c;
+  const totalAvailable = totalStock - totalReserved;
+  const totalValue = db.prepare("SELECT COALESCE(SUM(price*stock),0) as c FROM products").get().c;
+  const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND (stock - stockReserved) <= 5").get().c;
+  const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0 OR (stock - stockReserved) <= 0").get().c;
+  const warehouseBreakdown = db.prepare("SELECT category, COUNT(*) as products, SUM(stock) as totalStock, SUM(stockReserved) as reserved, SUM(stockIncoming) as incoming FROM products GROUP BY category ORDER BY products DESC").all();
+  res.json({ totalStock, totalReserved, totalIncoming, totalSold, totalAvailable, totalValue, lowStock, outOfStock, warehouseBreakdown });
+});
+
 app.get("/api/admin/reports/sales", adminRequired, (_req, res) => {
   const totalRevenue = db.prepare("SELECT COALESCE(SUM(grandTotal),0) as c FROM orders").get().c;
   const totalOrders = db.prepare("SELECT COUNT(*) as c FROM orders").get().c;

@@ -148,6 +148,7 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "admin-users": return <AdminUsers setCurrentPage={go} />;
       case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
       case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
+      case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
       case "admin-categories": return <AdminCategories setCurrentPage={go} />;
       case "admin-accounts": return <AdminAccounts setCurrentPage={go} />;
             case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
