@@ -69,7 +69,8 @@ function AdminAccounts({ setCurrentPage }: Props) {
             <td>{new Date(a.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</td>
           </tr>
         ))}</tbody>
-      </table></div></div>
+      </table></div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,15 @@ function Login({ setCurrentPage }: LoginProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
+
+  // Already logged in? Redirect staff to dashboard
+  useEffect(() => {
+    if (user && ["admin","sub-admin","merchant"].includes(user.role)) {
+      const dash = user.role === "admin" ? "admin-dashboard" : user.role === "sub-admin" ? "sub-dashboard" : "merchant-dashboard";
+      setCurrentPage(dash);
+    }
+  }, [user]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

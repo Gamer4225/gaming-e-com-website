@@ -46,7 +46,8 @@ function AdminBrands({ setCurrentPage }: Props) {
             <td>{b.rating?.toFixed(1)} ★</td>
           </tr>
         ))}</tbody>
-      </table></div></div>
+      </table></div>
+      </div>
     </div>
   );
 }

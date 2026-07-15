@@ -34,7 +34,8 @@ function AdminCategories({ setCurrentPage }: Props) {
             <td>{c.oos === c.productCount ? <span className="badge badge-red">All OOS</span> : c.oos > 0 ? <span className="badge badge-orange">Partial</span> : <span className="badge badge-green">Healthy</span>}</td>
           </tr>
         ))}</tbody>
-      </table></div></div>
+      </table></div>
+      </div>
     </div>
   );
 }

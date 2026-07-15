@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Filters from "../components/Filters/Filters";
 import ProductGrid from "../components/ProductGrid/ProductGrid";
 import { useProductCatalog } from "../context/ProductCatalogContext";
+import RecentlyViewedRow from "../components/RecentlyViewedRow";
 import "./Products.css";
 
 interface ProductsProps {

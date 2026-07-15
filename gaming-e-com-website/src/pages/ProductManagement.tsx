@@ -108,6 +108,7 @@ function ProductManagement({ setCurrentPage }: Props) {
   };
 
   if (!user || !["admin","sub-admin","merchant","seller"].includes(user.role)) return <div className="admin-body"><p>Access denied.</p></div>;
+  if (products.length === 0 && !search && stockFilter === "all" && (brandFilter === "All" || perms.lockedBrand)) return <div className="admin-body"><p>No products found. 🛒</p></div>;
 
   const form = () => (
     <div className="overlay" onClick={e => { if (e.target === e.currentTarget) { setEditing(null); setShowAdd(false); } }}>

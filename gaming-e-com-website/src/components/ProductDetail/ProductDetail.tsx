@@ -1,6 +1,7 @@
 // ProductDetail.tsx - Full product detail + specs + related + buy now + wishlist
 import { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useRecentlyViewed } from "../../context/RecentlyViewedContext";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useProductDetail, type Product } from "../../context/ProductDetailContext";
@@ -36,6 +37,7 @@ function ProductDetail({ setCurrentPage }: { setCurrentPage: (page: string) => v
   const { products: allProducts } = useProductCatalog();
   const { user } = useAuth();
   const blocked = ["admin", "sub-admin", "merchant"].includes(user?.role || "");
+  const { addView } = useRecentlyViewed();
   const [qty, setQty] = useState(1);
 
   const related = useMemo(() => {
