@@ -8,12 +8,14 @@ interface SignupProps {
 }
 
 function Signup({ setCurrentPage }: SignupProps) {
-  const { signup } = useAuth();
+  const { signup, user } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [role, setRole] = useState("customer");
+  const [brand, setBrand] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,6 +41,8 @@ function Signup({ setCurrentPage }: SignupProps) {
         email: email.trim(),
         phone: phone.trim() || undefined,
         password,
+        role,
+        brand: brand.trim() || undefined,
       });
       setCurrentPage("home");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -112,6 +116,21 @@ function Signup({ setCurrentPage }: SignupProps) {
               required
             />
           </label>
+          {user?.role === "admin" && (
+            <>
+              <label className="auth-field"><span>Account Role</span>
+                <select value={role} onChange={(e) => setRole(e.target.value)} style={{padding:"12px 14px",background:"var(--bg-tertiary)",border:"1px solid var(--border-color)",borderRadius:"var(--radius-sm)",color:"var(--text-primary)",fontSize:".95rem",outline:"none",fontFamily:"inherit"}}>
+                  <option value="customer">Customer</option>
+                  <option value="sub-admin">Sub-Admin</option>
+                  <option value="merchant">Merchant</option>
+                  <option value="seller">Seller</option>
+                </select>
+              </label>
+              {role === "merchant" && (
+                <label className="auth-field"><span>Brand Name</span><input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. ASUS, Corsair" /></label>
+              )}
+            </>
+          )}
           <button className="auth-submit" type="submit" disabled={submitting}>
             {submitting ? "Creating…" : "Sign Up"}
           </button>
