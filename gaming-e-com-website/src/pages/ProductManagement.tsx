@@ -64,7 +64,7 @@ function ProductManagement({ setCurrentPage }: Props) {
   };
 
   const del = async (id: number, nm: string) => {
-    if (!confirm(`Delete "${nm}"?`)) return;
+    if (!confirm(`Delete "${nm}"? (Only your own ${perms.lockedBrand ? "brand products" : perms.forceCondition ? "listings" : "products"} can be deleted)`)) return;
     await adminFetch(`${stockUrl}/${id}`, token!, { method: "DELETE" }); st(`Deleted: ${nm}`); load();
   };
 
@@ -102,7 +102,7 @@ function ProductManagement({ setCurrentPage }: Props) {
   const startAdd = () => {
     setEditing({
       name:"", brand: perms.lockedBrand || "", category:"CPU", price:999, originalPrice:999, discount:0,
-      condition: perms.forceCondition || "New", warranty:"1 Year", rating:4,
+      condition: perms.forceCondition || "New", warranty:"1 Year", rating:4, sku:"", slug:"", weight:0,
       stock: perms.forceCondition ? 1 : 10, description:"", image:"", featured:false
     }); setShowAdd(true);
   };
@@ -119,6 +119,11 @@ function ProductManagement({ setCurrentPage }: Props) {
             <div className="field"><label>Name *</label><input value={editing?.name||""} onChange={e => setEditing({...editing!, name: e.target.value})} required /></div>
             <div className="field"><label>Brand</label><input value={editing?.brand||""} onChange={e => setEditing({...editing!, brand: e.target.value})} disabled={!!perms.lockedBrand} /></div>
             <div className="field"><label>Category</label><select value={editing?.category} onChange={e => setEditing({...editing!, category: e.target.value})}>{CATS.map(c => <option key={c}>{c}</option>)}</select></div>
+          </div>
+          <div className="form-row">
+            <div className="field"><label>SKU</label><input value={(editing as any)?.sku||""} onChange={e => setEditing({...editing!, sku: e.target.value})} placeholder="e.g. GV-GPU-001" /></div>
+            <div className="field"><label>Slug</label><input value={(editing as any)?.slug||""} onChange={e => setEditing({...editing!, slug: e.target.value})} placeholder="auto-generated" /></div>
+            <div className="field"><label>Weight (kg)</label><input type="number" step="0.01" value={(editing as any)?.weight||0} onChange={e => setEditing({...editing!, weight: Number(e.target.value)})} /></div>
           </div>
           <div className="form-row">
             <div className="field"><label>Price ₹</label><input type="number" value={editing?.price||""} onChange={e => setEditing({...editing!, price: Number(e.target.value)})} /></div>

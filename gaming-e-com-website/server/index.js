@@ -539,8 +539,8 @@ app.post("/api/orders", (req, res) => {
           });
         }
         resolved.push({ product, qty });
-      // Track reserved + sold
-      db.prepare("UPDATE products SET stockReserved = stockReserved + ?, totalSold = totalSold + ? WHERE id = ?").run(qty, qty, id);
+      // Track order metrics
+      db.prepare("UPDATE products SET stockReserved = MAX(0, stockReserved - ?), totalSold = totalSold + ? WHERE id = ?").run(qty, qty, id);
       }
 
       // Deduct stock only after validation (payment moment)
@@ -794,6 +794,27 @@ app.post("/api/auth/login", (req, res) => {
   if (!ok) return res.status(401).json({ error: "Invalid email or password" });
   const token = signToken(user);
   res.json({ token, user: publicUser(user) });
+});
+
+// Reserve stock when adding to cart (prevents overselling)
+app.post("/api/cart/reserve", (req, res) => {
+  const { items } = req.body || {};
+  if (!Array.isArray(items)) return res.status(400).json({ error: "items array required" });
+  for (const { id, quantity } of items) {
+    if (!id || !quantity) continue;
+    db.prepare("UPDATE products SET stockReserved = stockReserved + ? WHERE id = ? AND stock - stockReserved >= ?").run(Number(quantity), Number(id), Number(quantity));
+  }
+  res.json({ ok: true });
+});
+
+app.post("/api/cart/release", (req, res) => {
+  const { items } = req.body || {};
+  if (!Array.isArray(items)) return res.status(400).json({ error: "items array required" });
+  for (const { id, quantity } of items) {
+    if (!id || !quantity) continue;
+    db.prepare("UPDATE products SET stockReserved = MAX(0, stockReserved - ?) WHERE id = ?").run(Number(quantity), Number(id));
+  }
+  res.json({ ok: true });
 });
 
 app.get("/api/auth/me", authRequired, (req, res) => {
