@@ -818,6 +818,30 @@ app.get("/api/admin/stats", adminRequired, (_req, res) => {
 });
 
 app.get("/api/admin/products", adminRequired, (req, res) => {
+  const { q, brand, filter } = req.query;
+  let sql = "SELECT * FROM products WHERE 1=1";
+  const params = {};
+  if (q && String(q).trim()) {
+    sql += " AND (LOWER(name) LIKE @q OR LOWER(brand) LIKE @q OR LOWER(category) LIKE @q)";
+    params.q = "%" + String(q).trim().toLowerCase() + "%";
+  }
+  if (brand && brand !== "All") { sql += " AND brand = @brand"; params.brand = String(brand); }
+  if (filter === "low") sql += " AND stock > 0 AND stock <= 5";
+  if (filter === "out") sql += " AND stock = 0";
+  sql += " ORDER BY id ASC";
+  res.json(db.prepare(sql).all(params).map(mapProduct));
+});
+
+app.get("/api/admin/products-stats", adminRequired, (_req, res) => {
+  const total = db.prepare("SELECT COUNT(*) as c FROM products").get().c;
+  const totalValue = db.prepare("SELECT COALESCE(SUM(price*stock),0) as c FROM products").get().c;
+  const low = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND stock <= 5").get().c;
+  const oos = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0").get().c;
+  res.json({ total, totalValue, low, oos });
+});
+
+// Old products endpoint (replaced)
+app.get("/api/admin/products_old", adminRequired, (req, res) => {
   const { q, brand } = req.query;
   let sql = "SELECT * FROM products WHERE 1=1";
   const params = {};
@@ -1166,6 +1190,22 @@ app.put("/api/customer/change-password", authRequired, (req, res) => {
 });
 
 // ---------- Reviews ----------
+// Customers only (no admins/sub-admins/merchants)
+app.get("/api/admin/customers", adminRequired, (_req, res) => {
+  const users = db.prepare("SELECT id, name, email, phone, role, createdAt FROM users WHERE role = 'customer' ORDER BY id ASC").all();
+  res.json(users.map((u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone || "", role: u.role, createdAt: u.createdAt })));
+});
+
+// All accounts with role filter
+app.get("/api/admin/accounts", adminRequired, (req, res) => {
+  const { role } = req.query;
+  let sql = "SELECT id, name, email, phone, role, brand, createdAt FROM users WHERE 1=1";
+  const params = {};
+  if (role && role !== "All") { sql += " AND role = @role"; params.role = String(role); }
+  sql += " ORDER BY id ASC";
+  res.json(db.prepare(sql).all(params));
+});
+
 app.get("/api/admin/reviews", adminRequired, (req, res) => {
   const { status, productId } = req.query;
   let sql = "SELECT r.*, p.name as productName FROM reviews r LEFT JOIN products p ON p.id = r.productId WHERE 1=1";

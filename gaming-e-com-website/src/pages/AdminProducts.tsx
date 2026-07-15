@@ -16,6 +16,8 @@ function AdminProducts({ setCurrentPage }: Props) {
   const [brands, setBrands] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [stats, setStats] = useState<{total:number,totalValue:number,low:number,oos:number} | null>(null);
   const [editing, setEditing] = useState<Partial<P> | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editStock, setEditStock] = useState<number | null>(null);
@@ -24,12 +26,18 @@ function AdminProducts({ setCurrentPage }: Props) {
   const load = useCallback(() => {
     if (!token) return;
     const p = new URLSearchParams(); if (search) p.set("q", search); if (brandFilter !== "All") p.set("brand", brandFilter);
+    if (stockFilter !== "all") p.set("filter", stockFilter);
     adminFetch("/api/admin/products?" + p.toString(), token).then(r => r.json()).then(setProducts);
+    adminFetch("/api/admin/products-stats", token).then(r => r.json()).then(setStats);
     adminFetch("/api/admin/brands", token).then(r => r.json()).then(setBrands);
-  }, [token, search, brandFilter]);
+  }, [token, search, brandFilter, stockFilter]);
   useEffect(() => { load(); }, [load]);
 
   const st = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2500); };
+  const updateStock = async (id: number, v: number) => {
+    await adminFetch(`/api/admin/products/${id}/stock`, token!, { method: "PATCH", body: JSON.stringify({ stock: v }) });
+    load(); st("Stock updated");
+  };
 
   const del = async (id: number, nm: string) => {
     if (!confirm(`Delete "${nm}"?`)) return;
@@ -107,9 +115,16 @@ function AdminProducts({ setCurrentPage }: Props) {
 
   return (
     <div className="admin-body">
+      <div className="stats-row">
+        <div className="stat-card"><div className="icon-circle purple">📦</div><div className="stat-info"><div className="value">{stats?.total || 0}</div><div className="label">Total Products</div></div></div>
+        <div className="stat-card"><div className="icon-circle green">💰</div><div className="stat-info"><div className="value">₹{stats?.totalValue?.toLocaleString("en-IN") || "0"}</div><div className="label">Inventory Value</div></div></div>
+        <div className="stat-card"><div className="icon-circle orange">⚠️</div><div className="stat-info"><div className="value">{stats?.low || 0}</div><div className="label">Low Stock (≤5)</div></div></div>
+        <div className="stat-card"><div className="icon-circle red">❌</div><div className="stat-info"><div className="value">{stats?.oos || 0}</div><div className="label">Out of Stock</div></div></div>
+      </div>
       <div className="toolbar">
         <div className="search-box"><span className="icon">🔍</span><input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} /></div>
         <div className="select-box"><select value={brandFilter} onChange={e => setBrandFilter(e.target.value)}><option value="All">All Brands</option>{brands.map(b => <option key={b}>{b}</option>)}</select></div>
+        <div className="select-box"><select value={stockFilter} onChange={e => setStockFilter(e.target.value)}><option value="all">All Stock</option><option value="low">Low Stock</option><option value="out">Out of Stock</option></select></div>
         <button className="btn btn-primary" onClick={startAdd}>+ Add Product</button>
         <button className="btn btn-secondary btn-sm" onClick={exportCSV}>📥 Export CSV</button>
         <button className="btn btn-danger btn-sm" onClick={reseed}>↺ Reseed</button>
@@ -122,11 +137,15 @@ function AdminProducts({ setCurrentPage }: Props) {
               <td>{p.id}</td>
               <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</td>
               <td>{p.brand}</td><td>{p.category}</td>
-              <td style={{ fontWeight: 600 }}>₹{p.price.toLocaleString("en-IN")}</td>
+              <td style={{ fontWeight: 600 }}>₹{p.price?.toLocaleString("en-IN")}</td>
               <td>
                 {editStock === p.id ? (
                   <input className="inline" type="number" min="0" defaultValue={p.stock} autoFocus onBlur={e => stockChange(p.id, Number(e.target.value))} onKeyDown={e => { if (e.key==="Enter") stockChange(p.id, Number((e.target as HTMLInputElement).value)); if (e.key==="Escape") setEditStock(null); }} />
-                ) : <span onClick={() => setEditStock(p.id)} style={{ cursor:"pointer" }}>{p.stock}{p.stock>0&&p.stock<=3?<span className="badge badge-orange" style={{marginLeft:4}}>LOW</span>:""}{p.stock===0?<span className="badge badge-red" style={{marginLeft:4}}>OOS</span>:""}</span>}
+                ) : <span onClick={() => setEditStock(p.id)} style={{ cursor:"pointer" }}>{p.stock}{p.stock>0&&p.stock<=5?<span className="badge badge-orange" style={{marginLeft:4}}>LOW</span>:""}{p.stock===0?<span className="badge badge-red" style={{marginLeft:4}}>OOS</span>:""}</span>}
+                <span style={{marginLeft:4}}>
+                  <button className="btn btn-sm btn-sec" style={{padding:"1px 6px",fontSize:".65rem",marginRight:2}} onClick={e => { e.stopPropagation(); updateStock(p.id, Math.max(0, p.stock-1)); }}>-1</button>
+                  <button className="btn btn-sm btn-sec" style={{padding:"1px 6px",fontSize:".65rem"}} onClick={e => { e.stopPropagation(); updateStock(p.id, p.stock+1); }}>+1</button>
+                </span>
               </td>
               <td><button className={`btn-icon ${p.featured?"active":""}`} onClick={() => toggleFeat(p.id)}>★</button></td>
               <td>

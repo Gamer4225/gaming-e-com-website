@@ -8,7 +8,7 @@ interface Props { setCurrentPage: (p: string) => void }
 function AdminUsers({ setCurrentPage }: Props) {
   const { user, token } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
-  useEffect(() => { if (!token) return; adminFetch("/api/admin/users", token).then(r => r.json()).then(setUsers); }, [token]);
+  useEffect(() => { if (!token) return; adminFetch("/api/admin/customers", token).then(r => r.json()).then(setUsers); }, [token]);
   if (!user || user.role !== "admin") return <div className="admin-body"><p>Access denied.</p></div>;
   return (
     <div className="admin-body">

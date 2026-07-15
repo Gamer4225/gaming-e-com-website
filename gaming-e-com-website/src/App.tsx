@@ -32,8 +32,8 @@ import StaffProducts from "./pages/StaffProducts";
 import CustomerAccount from "./pages/CustomerAccount";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
+import AdminAccounts from "./pages/AdminAccounts";
 import AdminCategories from "./pages/AdminCategories";
-import AdminInventory from "./pages/AdminInventory";
 import AdminReviews from "./pages/AdminReviews";
 import AdminCoupons from "./pages/AdminCoupons";
 import AdminActivityLogs from "./pages/AdminActivityLogs";
@@ -57,9 +57,9 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
     { id: "admin-dashboard", label: "Dashboard", icon: "📊" },
     { id: "admin-products", label: "Products", icon: "📦" },
     { id: "admin-categories", label: "Categories", icon: "🏷️" },
-    { id: "admin-inventory", label: "Inventory", icon: "🏭" },
     { id: "admin-orders", label: "Orders", icon: "📋" },
-    { id: "admin-customers", label: "Customers", icon: "👥" },
+    { id: "admin-accounts", label: "Accounts", icon: "👥" },
+    { id: "admin-customers", label: "Customers", icon: "👤" },
     { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
     { id: "admin-wishlisted", label: "Wishlist Analytics", icon: "💜" },
     { id: "admin-reviews", label: "Reviews", icon: "⭐" },
@@ -206,7 +206,7 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
       case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
       case "admin-categories": return <AdminCategories setCurrentPage={go} />;
-      case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
+      case "admin-accounts": return <AdminAccounts setCurrentPage={go} />;
       case "admin-customers": return <AdminUsers setCurrentPage={go} />;
       case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
       case "admin-coupons": return <AdminCoupons setCurrentPage={go} />;
