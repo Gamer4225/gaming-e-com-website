@@ -6,6 +6,7 @@ import { WishlistProvider } from "./context/WishlistContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { getPermissions, isStaffRole } from "./context/PermissionContext";
+import { getAdminTabs } from "./config/adminRouteConfig";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Footer from "./components/Footer/Footer";
@@ -46,40 +47,7 @@ import "./styles/global.css";
 const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
   const { user, logout } = useAuth();
   const perms = getPermissions((user?.role || "customer") as any);
-  const tabs: { id: string; label: string; icon: string }[] = [];
-
-  if (perms.canViewAllProducts) {
-    tabs.push({ id: user?.role === "admin" ? "admin-products" : "staff-products", label: perms.panelLabel === "Merchant" ? "My Products" : perms.panelLabel === "Seller" ? "My Listings" : "Products", icon: "📦" });
-    tabs.push({ id: "admin-categories", label: "Categories", icon: "🏷️" });
-  }
-  if (perms.canViewAllOrders) {
-    tabs.push({ id: "admin-orders", label: "Orders", icon: "📋" });
-  }
-  if (perms.canViewAccounts) {
-    tabs.push({ id: "admin-accounts", label: "Accounts", icon: "👥" });
-  }
-  if (perms.canViewMostOrdered) {
-    tabs.push({ id: "admin-ordered", label: "Most Ordered", icon: "🔥" });
-  }
-  if (perms.canViewMostWishlisted) {
-    tabs.push({ id: "admin-wishlisted", label: "Wishlist Analytics", icon: "💜" });
-  }
-  if (perms.canManageReviews) {
-    tabs.push({ id: "admin-reviews", label: "Reviews", icon: "⭐" });
-  }
-  if (perms.canManageCoupons) {
-    tabs.push({ id: "admin-coupons", label: "Coupons", icon: "🎫" });
-  }
-  if (perms.canViewReports) {
-    tabs.push({ id: "admin-reports", label: "Reports", icon: "📈" });
-  }
-  if (perms.canViewActivityLogs) {
-    tabs.push({ id: "admin-logs", label: "Activity Logs", icon: "📝" });
-  }
-  if (perms.canManageSettings) {
-    tabs.push({ id: "admin-settings", label: "Settings", icon: "⚙️" });
-  }
-  tabs.push({ id: "admin-password", label: "Change Password", icon: "🔑" });
+  const tabs = getAdminTabs(perms, user?.role || "");
 
   const currentTab = tabs.find(t => t.id === currentPage);
 
