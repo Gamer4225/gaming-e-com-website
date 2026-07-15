@@ -158,3 +158,22 @@
   .admin-topbar { padding: 12px 16px; }
   .admin-topbar h1 { font-size: 1.1rem; }
 }
+
+/* Trend indicators */
+.trend { font-size: .7rem; margin-top: 4px; font-weight: 600; }
+.trend.up { color: var(--success); }
+.trend.down { color: var(--danger); }
+
+/* Sidebar section divider */
+.sidebar-divider { height: 1px; background: rgba(255,255,255,.06); margin: 8px 12px; }
+
+/* Responsive grid for 2-col layouts */
+@media (max-width: 900px) {
+  .admin-body > div[style*="grid-template-columns: 1fr 1fr"],
+  .admin-body > div > div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Bar chart tooltip-style hover */
+.admin-body [title]:hover { opacity: .85; }

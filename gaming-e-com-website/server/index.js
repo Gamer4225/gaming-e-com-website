@@ -750,16 +750,18 @@ app.get("/api/admin/stats", adminRequired, (_req, res) => {
   const outOfStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock = 0").get().c;
   const lowStock = db.prepare("SELECT COUNT(*) as c FROM products WHERE stock > 0 AND stock <= 3").get().c;
   const totalRevenue = db.prepare("SELECT COALESCE(SUM(grandTotal),0) as c FROM orders").get().c;
-  const catStats = db.prepare(
-    "SELECT category, COUNT(*) as total, SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as outOfStock FROM products GROUP BY category ORDER BY category"
-  ).all();
-  const recentOrders = db.prepare(
-    "SELECT orderId, grandTotal, placedAt, status FROM orders ORDER BY id DESC LIMIT 5"
-  ).all();
-  const recentActivity = db.prepare(
-    "SELECT orderId, grandTotal, placedAt, status, 'order' as type FROM orders ORDER BY id DESC LIMIT 10"
-  ).all();
-  res.json({ totalProducts, totalOrders, totalUsers, outOfStock, lowStock, totalRevenue, catStats, recentOrders, recentActivity });
+  const completedOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'Delivered'").get().c;
+  const pendingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'Processing'").get().c;
+  const cancelledOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'Cancelled'").get().c;
+  const avgOrderValue = completedOrders > 0 ? Math.round(totalRevenue / completedOrders) : 0;
+  const catStats = db.prepare("SELECT category, COUNT(*) as total, SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as outOfStock FROM products GROUP BY category ORDER BY total DESC").all();
+  const recentOrders = db.prepare("SELECT orderId, grandTotal, placedAt, status, fullName FROM orders ORDER BY id DESC LIMIT 10").all();
+  const recentActivity = db.prepare("SELECT orderId, grandTotal, placedAt, status, fullName FROM orders ORDER BY id DESC LIMIT 12").all();
+  const topProducts = db.prepare("SELECT oi.productId as id, oi.name, oi.brand, oi.image, p.category, p.stock, p.price, SUM(oi.quantity) as sold, COUNT(DISTINCT oi.orderId) as timesOrdered FROM order_items oi JOIN products p ON p.id = oi.productId GROUP BY oi.productId ORDER BY sold DESC LIMIT 8").all();
+  const wishlistTop = db.prepare("SELECT p.id, p.name, p.brand, p.category, p.price, p.stock, p.rating, p.featured, COALESCE(w.count,0) as wishlistCount FROM products p LEFT JOIN wishlists w ON w.productId = p.id ORDER BY w.count DESC, p.rating DESC LIMIT 8").all();
+  // Revenue per day (last 30 days)
+  const revPerDay = db.prepare("SELECT DATE(placedAt) as day, COALESCE(SUM(grandTotal),0) as revenue FROM orders WHERE placedAt > date('now','-30 days') GROUP BY DATE(placedAt) ORDER BY day").all();
+  res.json({ totalProducts, totalOrders, totalUsers, outOfStock, lowStock, totalRevenue, completedOrders, pendingOrders, cancelledOrders, avgOrderValue, catStats, recentOrders, recentActivity, topProducts, wishlistTop, revPerDay });
 });
 
 app.get("/api/admin/products", adminRequired, (req, res) => {
