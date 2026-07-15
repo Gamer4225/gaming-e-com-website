@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { adminFetch } from "../context/AdminContext";
+import { api } from "../services/api";
 import "./Admin.css";
 
 interface Props { setCurrentPage: (p: string) => void }
@@ -22,13 +22,13 @@ function AdminOrders({ setCurrentPage }: Props) {
   const load = useCallback(() => {
     if (!token) return;
     const p = new URLSearchParams(); if (statusFilter !== "All") p.set("status", statusFilter);
-    adminFetch("/api/admin/orders?"+p.toString(), token).then(r => r.json()).then(setOrders);
+    api.orders.adminList(token, p.toString()).then(setOrders);
   }, [token, statusFilter]);
   useEffect(() => { load(); }, [load]);
   const st = (m:string) => { setToast(m); setTimeout(() => setToast(""), 2500); };
 
   const updateStatus = async (oid: string, s: string) => {
-    await adminFetch(`/api/admin/orders/${oid}/status`, token!, { method: "PATCH", body: JSON.stringify({ status: s }) });
+    await api.orders.updateStatus(token!, oid, s);
     setOrders(prev => prev.map(o => o.orderId===oid?{...o, status:s}:o)); st(`Order ${oid}: ${s}`);
   };
 

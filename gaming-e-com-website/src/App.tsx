@@ -1,6 +1,7 @@
 // App.tsx — Simple routing by page name, no role checks
 import { useState, useEffect, type ReactNode } from "react";
 import { CartProvider, useCart } from "./context/CartContext";
+import { OrderProvider } from "./context/OrderContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
@@ -152,6 +153,6 @@ function AppRouter() {
 }
 
 function App() {
-  return <AuthProvider><ProductCatalogProvider><CartProvider><WishlistProvider><CompareProvider><NotificationProvider><RecentlyViewedProvider><ProductDetailProvider><AppRouter /></ProductDetailProvider></RecentlyViewedProvider></NotificationProvider></CompareProvider></WishlistProvider></CartProvider></ProductCatalogProvider></AuthProvider>;
+  return <AuthProvider><ProductCatalogProvider><OrderProvider><CartProvider><WishlistProvider><CompareProvider><NotificationProvider><RecentlyViewedProvider><ProductDetailProvider><AppRouter /></ProductDetailProvider></RecentlyViewedProvider></NotificationProvider></CompareProvider></WishlistProvider></CartProvider></OrderProvider></ProductCatalogProvider></AuthProvider>;
 }
 export default App;

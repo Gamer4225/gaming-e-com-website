@@ -1,7 +1,9 @@
-// WishlistContext.tsx — Server is source of truth via api.wishlist
+// WishlistContext.tsx — Server is the ONLY source of truth
+// Every mutation (add/remove/clear) goes through the backend first.
+// Local state updates ONLY after server confirms success.
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { api } from "../services/api";
+import { wishlistService } from "../services/wishlistService";
 
 interface WishlistContextValue { wishlistIds: number[]; isInWishlist: (id: number) => boolean; toggleWishlist: (id: number) => void; removeFromWishlist: (id: number) => void; clearWishlist: () => void; wishlistCount: number }
 
@@ -20,25 +22,38 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [ids, setIds] = useState<number[]>(() => loadLocal());
   const { token } = useAuth();
 
-  // On mount (or token change): load from server as source of truth
+  // Load from server on mount (or token change) — server is source of truth
   useEffect(() => {
-    const fetcher = token ? api.wishlist.listMine(token) : api.wishlist.list();
-    fetcher.then(data => { if (data?.ids && Array.isArray(data.ids)) setIds(data.ids.filter((n:any) => typeof n === "number")); }).catch(() => {});
+    wishlistService.load(token).then(serverIds => {
+      if (serverIds.length > 0 || ids.length === 0) setIds(serverIds);
+    });
   }, [token]);
 
-  // Offline cache
+  // Cache to localStorage for offline
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(ids)); }, [ids]);
 
-  const toggleWishlist = useCallback((id: number) => {
-    setIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      api.wishlist.toggle(id).catch(() => {});
-      return next;
-    });
-  }, []);
+  // Toggle: update server first, then local state
+  const toggleWishlist = useCallback(async (id: number) => {
+    const { added } = await wishlistService.toggle(id);
+    // Reload from server to get ground truth
+    const serverIds = await wishlistService.load(token);
+    setIds(serverIds);
+  }, [token]);
 
-  const removeFromWishlist = useCallback((id: number) => setIds(p => p.filter(x => x !== id)), []);
-  const clearWishlist = useCallback(() => setIds([]), []);
+  // Remove: goes through server
+  const removeFromWishlist = useCallback(async (id: number) => {
+    await wishlistService.remove(id);
+    const serverIds = await wishlistService.load(token);
+    setIds(serverIds);
+  }, [token]);
+
+  // Clear: goes through server for every item
+  const clearWishlist = useCallback(async () => {
+    await wishlistService.clear(ids);
+    const serverIds = await wishlistService.load(token);
+    setIds(serverIds);
+  }, [ids, token]);
+
   const isInWishlist = useCallback((id: number) => ids.includes(id), [ids]);
 
   return <WishlistContext.Provider value={{ wishlistIds: ids, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: ids.length }}>{children}</WishlistContext.Provider>;

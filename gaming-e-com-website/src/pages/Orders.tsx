@@ -1,7 +1,5 @@
 // Orders.tsx — Reads from server database via api.orders
-import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { useOrders } from "../context/OrderContext";
 import ProductImage from "../components/ProductImage/ProductImage";
 import "./StaticPages.css";
 
@@ -11,14 +9,8 @@ const pLabels: Record<string,string> = {cod:"Cash on Delivery",upi:"UPI (Demo)",
 interface Props { setCurrentPage: (p: string) => void; setSelectedCategory: (c: string) => void }
 
 function Orders({ setCurrentPage, setSelectedCategory }: Props) {
-  const { user, token } = useAuth();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetcher = token ? api.orders.listMine(token) : api.orders.listPublic();
-    fetcher.then(d => setOrders(Array.isArray(d) ? d : [])).catch(() => setOrders([])).finally(() => setLoading(false));
-  }, [token]);
+  const { user } = useAuth();
+  const { orders, loading, refreshOrders } = useOrders();
 
   if (loading) return <div className="static-page"><h1>My Orders</h1><p style={{color:"var(--text-secondary)"}}>Loading...</p></div>;
 

@@ -321,61 +321,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
 
         setLastOrder(order);
-        setOrderHistory((prev) => [order, ...prev].slice(0, 20));
         setCartItems([]);
         showToast("Order placed successfully!");
         return order;
       } catch {
-        // Offline fallback: local order only (no real stock DB update)
-        showToast("Server offline — placing local demo order");
-        const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const gstAmount = Math.round(subtotal * 0.18);
-        const totalSavings = cartItems.reduce(
-          (sum, item) => sum + (item.originalPrice - item.price) * item.quantity,
-          0
-        );
-        const grandTotal = subtotal + gstAmount;
-        const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        const delivery = new Date();
-        delivery.setDate(delivery.getDate() + 3 + Math.floor(Math.random() * 3));
-        const order: PlacedOrder = {
-          orderId: `GV-LOCAL-${Date.now().toString(36).toUpperCase()}`,
-          items: cartItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            brand: item.brand,
-            image: item.image,
-            price: item.price,
-            originalPrice: item.originalPrice,
-            quantity: item.quantity,
-            condition: item.condition,
-          })),
-          address,
-          paymentMethod,
-          subtotal,
-          gstAmount,
-          totalSavings,
-          grandTotal,
-          itemCount,
-          placedAt: new Date().toISOString(),
-          estimatedDelivery: delivery.toLocaleDateString("en-IN", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-        };
-        // Simulate stock drop locally only after "payment"
-        applyStockUpdates(
-          cartItems.map((item) => ({
-            id: item.id,
-            stock: Math.max(0, item.stock - item.quantity),
-          }))
-        );
-        setLastOrder(order);
-        setOrderHistory((prev) => [order, ...prev].slice(0, 20));
-        setCartItems([]);
-        return order;
+        showToast("Server offline — please check your connection and try again");
+        return null;
       }
     },
     [cartItems, applyStockUpdates, showToast]
