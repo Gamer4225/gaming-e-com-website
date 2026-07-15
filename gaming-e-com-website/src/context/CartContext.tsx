@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { type Product } from "./ProductDetailContext";
+import { useAuth } from "./AuthContext";
 import { useProductCatalog, API_BASE } from "./ProductCatalogContext";
 
 export interface CartItem extends Product {
@@ -110,6 +111,7 @@ function maxQtyForProduct(product: Product): number {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { applyStockUpdates, getProductById, products } = useProductCatalog();
+  const { token } = useAuth();
 
   const [cartItems, setCartItems] = useState<CartItem[]>(() =>
     loadJSON<CartItem[]>(CART_STORAGE_KEY, [])
@@ -131,15 +133,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
   }, [cartItems]);
 
-  useEffect(() => {
-    if (lastOrder) {
-      localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(lastOrder));
-    }
-  }, [lastOrder]);
-
-  useEffect(() => {
-    localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(orderHistory));
-  }, [orderHistory]);
+  // Order history is now server-based (GET /api/my-orders) — no localStorage persistence needed
 
   // After catalog stock changes (e.g. order paid), clamp/remove cart lines
   useEffect(() => {

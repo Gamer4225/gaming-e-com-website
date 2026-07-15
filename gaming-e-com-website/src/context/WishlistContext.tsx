@@ -1,8 +1,9 @@
 // WishlistContext.tsx — Server is source of truth, localStorage is offline cache
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { API_BASE } from "./ProductCatalogContext";
+import { useAuth } from "./AuthContext";
 
-interface WishlistContextValue { wishlistIds: number[]; isInWishlist: (id: number) => boolean; toggleWishlist: (id: number) => void; removeFromWishlist: (id: number) => void; clearWishlist: () => void; wishlistCount: number; loading: boolean }
+interface WishlistContextValue { wishlistIds: number[]; isInWishlist: (id: number) => boolean; toggleWishlist: (id: number) => void; removeFromWishlist: (id: number) => void; clearWishlist: () => void; wishlistCount: number }
 
 const KEY = "gamevault_wishlist";
 const WishlistContext = createContext<WishlistContextValue | undefined>(undefined);
@@ -17,20 +18,17 @@ function loadLocal(): number[] { try { const r = localStorage.getItem(KEY); retu
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [ids, setIds] = useState<number[]>(() => loadLocal());
-  const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
-  // On mount: load from server (source of truth), fall back to localStorage
+  // On mount (or token change): load from server as source of truth
   useEffect(() => {
-    fetch(`${API_BASE}/api/wishlist`)
+    const url = token ? `${API_BASE}/api/my-wishlist` : `${API_BASE}/api/wishlist`;
+    const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch(url, { headers })
       .then(r => r.json())
-      .then(data => {
-        if (data?.ids && Array.isArray(data.ids)) {
-          setIds(data.ids.filter((n: any) => typeof n === "number"));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      .then(data => { if (data?.ids && Array.isArray(data.ids)) setIds(data.ids.filter((n:any) => typeof n === "number")); })
+      .catch(() => {});
+  }, [token]);
 
   // Persist to localStorage as offline cache
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(ids)); }, [ids]);
@@ -38,7 +36,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const toggleWishlist = useCallback((id: number) => {
     setIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      // Send to server (fire-and-forget)
       fetch(`${API_BASE}/api/wishlist/${id}`, { method: "POST" }).catch(() => {});
       return next;
     });
@@ -48,9 +45,5 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const clearWishlist = useCallback(() => setIds([]), []);
   const isInWishlist = useCallback((id: number) => ids.includes(id), [ids]);
 
-  return (
-    <WishlistContext.Provider value={{ wishlistIds: ids, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: ids.length, loading }}>
-      {children}
-    </WishlistContext.Provider>
-  );
+  return <WishlistContext.Provider value={{ wishlistIds: ids, isInWishlist, toggleWishlist, removeFromWishlist, clearWishlist, wishlistCount: ids.length }}>{children}</WishlistContext.Provider>;
 }

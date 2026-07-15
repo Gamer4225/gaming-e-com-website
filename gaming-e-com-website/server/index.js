@@ -449,6 +449,27 @@ function logActivity(db, userId, userName, action, details) {
   );
 }
 
+// User-scoped orders (logged-in user's own orders)
+app.get("/api/my-orders", authRequired, (req, res) => {
+  const orders = db.prepare("SELECT * FROM orders WHERE userId = ? ORDER BY id DESC LIMIT 50").all(req.user.id);
+  if (orders.length === 0) return res.json([]);
+  const itemStmt = db.prepare("SELECT * FROM order_items WHERE orderId = ?");
+  res.json(orders.map(o => ({
+    orderId: o.orderId, status: o.status || "Processing", paymentMethod: o.paymentMethod,
+    subtotal: o.subtotal, gstAmount: o.gstAmount, totalSavings: o.totalSavings,
+    grandTotal: o.grandTotal, itemCount: o.itemCount, placedAt: o.placedAt,
+    estimatedDelivery: o.estimatedDelivery,
+    address: { fullName: o.fullName, phone: o.phone, email: o.email || "", addressLine1: o.addressLine1, addressLine2: o.addressLine2 || "", city: o.city, state: o.state, pincode: o.pincode },
+    items: itemStmt.all(o.orderId).map(i => ({ id: i.productId, name: i.name, brand: i.brand, image: i.image, price: i.price, originalPrice: i.originalPrice, quantity: i.quantity, condition: i.condition })),
+  })));
+});
+
+// User-scoped wishlist (logged-in user's wishlist from server)
+app.get("/api/my-wishlist", authRequired, (req, res) => {
+  const ids = db.prepare("SELECT productId FROM wishlists ORDER BY lastAdded DESC").all().map(r => r.productId);
+  res.json({ ids });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
