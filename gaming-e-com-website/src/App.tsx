@@ -1,11 +1,8 @@
-// App.tsx - Clean separation: Admin Panel vs Customer Store
+// App.tsx — Simple routing by page name, no role checks
 import { useState, useEffect, type ReactNode } from "react";
 import { CartProvider, useCart } from "./context/CartContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
-import { CompareProvider } from "./context/CompareContext";
-import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
-import { NotificationProvider } from "./context/NotificationContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { getPermissions } from "./context/PermissionContext";
@@ -26,35 +23,38 @@ import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminDashboard from "./pages/AdminDashboard";
-import ProductManagement from "./pages/ProductManagement";
-// ProductManagement is the unified component for all roles
 import AdminOrders from "./pages/AdminOrders";
 import AdminChangePassword from "./pages/AdminChangePassword";
 import SubAdminDashboard from "./pages/SubAdminDashboard";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
+import ProductManagement from "./pages/ProductManagement";
 import CustomerAccount from "./pages/CustomerAccount";
-import CompareProducts from "./pages/CompareProducts";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
-import AdminAccounts from "./pages/AdminAccounts";
 import AdminCategories from "./pages/AdminCategories";
+import AdminAccounts from "./pages/AdminAccounts";
+import AdminBrands from "./pages/AdminBrands";
+import AdminInventory from "./pages/AdminInventory";
 import AdminReviews from "./pages/AdminReviews";
 import AdminCoupons from "./pages/AdminCoupons";
 import AdminActivityLogs from "./pages/AdminActivityLogs";
 import AdminReports from "./pages/AdminReports";
 import AdminSettings from "./pages/AdminSettings";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
+import CompareProducts from "./pages/CompareProducts";
+import AdminUsers from "./pages/AdminUsers";
+import RecentlyViewedRow from "./components/RecentlyViewedRow";
+import { CompareProvider } from "./context/CompareContext";
+import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import "./styles/global.css";
 
-// ==================== ADMIN LAYOUT ====================
 const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
   const { user, logout } = useAuth();
   const perms = getPermissions((user?.role || "customer") as any);
   const tabs = getAdminTabs(perms, user?.role || "");
-
   const currentTab = tabs.find(t => t.id === currentPage);
-
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside className="admin-sidebar">
@@ -73,27 +73,12 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
   );
 };
 
-// ==================== CUSTOMER STORE ====================
-function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery }: {
-  currentPage: string; setCurrentPage: (p: string) => void;
-  selectedCategory: string; setSelectedCategory: (c: string) => void;
-  searchQuery: string; setSearchQuery: (q: string) => void;
-}) {
+function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery }: any) {
   const { toast } = useCart();
   const { selectedProduct, clearSelection } = useProductDetail();
   useEffect(() => { if (selectedProduct) setCurrentPage("detail"); }, [selectedProduct]);
-
-  const go = (page: string) => {
-    if (page !== "detail") clearSelection();
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const isFull = currentPage === "home" || currentPage === "checkout" || currentPage === "order-success" ||
-    currentPage === "about" || currentPage === "contact" || currentPage === "faq" ||
-    currentPage === "orders" || currentPage === "wishlist" || currentPage === "login" || currentPage === "signup" || currentPage === "account" ||
-    currentPage === "compare";
-
+  const go = (page: string) => { if (page !== "detail") clearSelection(); setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const isFull = ["home","checkout","order-success","about","contact","faq","orders","wishlist","login","signup","account","compare"].includes(currentPage);
   const render = () => {
     switch (currentPage) {
       case "detail": return <ProductDetail setCurrentPage={go} />;
@@ -108,21 +93,17 @@ function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelec
       case "wishlist": return <Wishlist setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
       case "login": return <Login setCurrentPage={go} />;
       case "signup": return <Signup setCurrentPage={go} />;
-      case "compare": return <CompareProducts setCurrentPage={go} />;
       case "account": return <CustomerAccount setCurrentPage={go} />;
+      case "compare": return <CompareProducts setCurrentPage={go} />;
       default: return <Home setCurrentPage={go} setSelectedCategory={setSelectedCategory} setSearchQuery={setSearchQuery} />;
     }
   };
-
   return (
     <div className="app">
       <Navbar currentPage={currentPage} setCurrentPage={go} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedCategory={setSelectedCategory} />
       {toast && <div className="toast-container"><div className="toast">{toast}</div></div>}
       {isFull ? <div className="page-content-full">{render()}</div> : (
-        <div className="page-layout">
-          <Sidebar selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} setCurrentPage={go} />
-          <main className="page-content">{render()}</main>
-        </div>
+        <div className="page-layout"><Sidebar selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} setCurrentPage={go} /><main className="page-content">{render()}</main></div>
       )}
       <Footer setCurrentPage={go} setSelectedCategory={setSelectedCategory} />
       <CartDrawer setCurrentPage={go} setSelectedCategory={setSelectedCategory} />
@@ -130,28 +111,20 @@ function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelec
   );
 }
 
-// ==================== ADMIN PANEL ====================
-function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setCurrentPage: (p: string) => void }) {
+function AdminPanel({ currentPage, setCurrentPage }: any) {
   const { selectedProduct, clearSelection } = useProductDetail();
   useEffect(() => { if (selectedProduct) setCurrentPage("detail"); }, [selectedProduct]);
-
-  const go = (page: string) => {
-    if (page !== "detail") clearSelection();
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
+  const go = (page: string) => { if (page !== "detail") clearSelection(); setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const render = () => {
     switch (currentPage) {
       case "admin-dashboard": return <AdminDashboard setCurrentPage={go} />;
-      case "admin-products": return <ProductManagement setCurrentPage={go} />;
+      case "admin-products": case "staff-products": return <ProductManagement setCurrentPage={go} />;
       case "admin-orders": return <AdminOrders setCurrentPage={go} />;
-            case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
-      case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
-      case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
       case "admin-categories": return <AdminCategories setCurrentPage={go} />;
       case "admin-accounts": return <AdminAccounts setCurrentPage={go} />;
-            case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
+      case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
+      case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
+      case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
       case "admin-coupons": return <AdminCoupons setCurrentPage={go} />;
       case "admin-logs": return <AdminActivityLogs setCurrentPage={go} />;
       case "admin-reports": return <AdminReports setCurrentPage={go} />;
@@ -160,57 +133,25 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "sub-dashboard": return <SubAdminDashboard setCurrentPage={go} />;
       case "merchant-dashboard": return <MerchantDashboard setCurrentPage={go} />;
       case "seller-dashboard": return <SellerDashboard setCurrentPage={go} />;
-      case "staff-products": return <ProductManagement setCurrentPage={go} />;
+      case "admin-inventory": return <AdminInventory setCurrentPage={go} />;
+      case "admin-brands": return <AdminBrands setCurrentPage={go} />;
+      case "admin-users": return <AdminUsers setCurrentPage={go} />;
       default: return <AdminDashboard setCurrentPage={go} />;
     }
   };
-
-  return (
-    <AdminLayout currentPage={currentPage} setCurrentPage={go}>
-      {render()}
-    </AdminLayout>
-  );
+  return <AdminLayout currentPage={currentPage} setCurrentPage={go}>{render()}</AdminLayout>;
 }
 
-// ==================== ROOT ROUTER ====================
 function AppRouter() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const { user } = useAuth();
-
-  // Staff-only pages trigger AdminPanel
   const isStaffPage = currentPage.startsWith("admin-") || currentPage.startsWith("sub-") || currentPage.startsWith("merchant-") || currentPage.startsWith("seller-") || currentPage.startsWith("staff-");
-
-  // Staff pages → admin panel
-  if (isStaffPage) {
-    return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
-  }
-
-  // Everything else (home, products, wishlist, orders, login, signup, etc.) → CustomerStore
-  return (
-    <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
-      selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-      searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-  );
+  if (isStaffPage) return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+  return <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />;
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <ProductCatalogProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <CompareProvider><NotificationProvider><RecentlyViewedProvider>
-            <ProductDetailProvider>
-              <AppRouter />
-            </ProductDetailProvider>
-          </RecentlyViewedProvider></NotificationProvider></CompareProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </ProductCatalogProvider>
-    </AuthProvider>
-  );
+  return <AuthProvider><ProductCatalogProvider><CartProvider><WishlistProvider><CompareProvider><NotificationProvider><RecentlyViewedProvider><ProductDetailProvider><AppRouter /></ProductDetailProvider></RecentlyViewedProvider></NotificationProvider></CompareProvider></WishlistProvider></CartProvider></ProductCatalogProvider></AuthProvider>;
 }
-
 export default App;
