@@ -5,6 +5,7 @@ import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { CompareProvider } from "./context/CompareContext";
 import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { getPermissions, isStaffRole } from "./context/PermissionContext";
@@ -208,11 +209,11 @@ function App() {
       <ProductCatalogProvider>
         <CartProvider>
           <WishlistProvider>
-            <CompareProvider><RecentlyViewedProvider>
+            <CompareProvider><NotificationProvider><RecentlyViewedProvider>
             <ProductDetailProvider>
               <AppRouter />
             </ProductDetailProvider>
-          </RecentlyViewedProvider></CompareProvider>
+          </RecentlyViewedProvider></NotificationProvider></CompareProvider>
           </WishlistProvider>
         </CartProvider>
       </ProductCatalogProvider>

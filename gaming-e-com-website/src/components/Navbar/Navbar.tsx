@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "../NotificationBell";
 import { LogoIcon, SearchIcon, CartIcon, UserIcon, LogoutIcon } from "../Icons/Icons";
 import "./Navbar.css";
 
@@ -119,6 +120,7 @@ function Navbar({
           />
         </div>
 
+        <NotificationBell />
         {user?.role !== "admin" && (
         <button
           type="button"

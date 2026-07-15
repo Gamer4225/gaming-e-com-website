@@ -1465,11 +1465,12 @@ app.post("/api/admin/bulk-discount", adminRequired, (req, res) => {
 
 app.patch("/api/admin/orders/:orderId/status", adminRequired, (req, res) => {
   const { status } = req.body || {};
-  const valid = ["Processing", "Shipped", "Delivered", "Cancelled"];
+  const valid = ["Processing", "Packaging", "Shipping", "Delivering", "Parceled/Arrived", "Cancelled"];
   if (!status || !valid.includes(String(status))) return res.status(400).json({ error: "Invalid status. Use: " + valid.join(", ") });
   const o = db.prepare("SELECT * FROM orders WHERE orderId = ?").get(req.params.orderId);
   if (!o) return res.status(404).json({ error: "Order not found" });
   db.prepare("UPDATE orders SET status = ? WHERE orderId = ?").run(String(status), req.params.orderId);
+  logActivity(db, req.user.id, req.user.name, "order_status", `Order ${req.params.orderId} → ${status}`);
   res.json({ orderId: req.params.orderId, status: String(status) });
 });
 
