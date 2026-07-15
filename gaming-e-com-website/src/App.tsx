@@ -177,12 +177,9 @@ function AppRouter() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const perms = getPermissions((user?.role || "customer") as any);
   const isStaff = isStaffRole(user?.role || "");
-
-  // Show loading while auth is checking
-  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-secondary)" }}>Loading...</div>;
 
   // Staff roles → redirect to dashboard if not already on staff pages
   useEffect(() => {
