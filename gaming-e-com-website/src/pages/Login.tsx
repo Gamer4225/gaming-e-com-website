@@ -19,8 +19,8 @@ function Login({ setCurrentPage }: LoginProps) {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
-      setCurrentPage("home");
+      const result: any = await login(email.trim(), password);
+      setCurrentPage(result?.role === "admin" || result?.role === "sub-admin" || result?.role === "merchant" || result?.role === "seller" ? (result?.role === "admin" ? "admin-dashboard" : result?.role === "sub-admin" ? "sub-dashboard" : result?.role === "merchant" ? "merchant-dashboard" : "seller-dashboard") : "home");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

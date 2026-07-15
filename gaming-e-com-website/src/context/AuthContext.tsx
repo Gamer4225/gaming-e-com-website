@@ -23,7 +23,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
   signup: (data: {
     name: string;
     email: string;
@@ -107,10 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || "Login failed");
     persist(data.token, data.user);
+    return data.user;
   }, []);
 
   const signup = useCallback(
-    async (payload: { name: string; email: string; phone?: string; password: string }) => {
+    async (payload: { name: string; email: string; phone?: string; password: string; role?: string; brand?: string }) => {
       const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Signup failed");
       persist(data.token, data.user);
+      return data.user;
     },
     []
   );

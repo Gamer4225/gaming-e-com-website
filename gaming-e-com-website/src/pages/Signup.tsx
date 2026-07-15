@@ -36,7 +36,7 @@ function Signup({ setCurrentPage }: SignupProps) {
     }
     setSubmitting(true);
     try {
-      await signup({
+      const result: any = await signup({
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
@@ -44,7 +44,8 @@ function Signup({ setCurrentPage }: SignupProps) {
         role,
         brand: brand.trim() || undefined,
       });
-      setCurrentPage("home");
+      const r = result?.role || "customer";
+      setCurrentPage(r === "admin" ? "admin-dashboard" : r === "sub-admin" ? "sub-dashboard" : r === "merchant" ? "merchant-dashboard" : r === "seller" ? "seller-dashboard" : "home");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
