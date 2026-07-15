@@ -5,6 +5,7 @@ import { ProductCatalogProvider } from "./context/ProductCatalogContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { ProductDetailProvider, useProductDetail } from "./context/ProductDetailContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { getPermissions, isStaffRole } from "./context/PermissionContext";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Footer from "./components/Footer/Footer";
@@ -44,86 +45,56 @@ import "./styles/global.css";
 // ==================== ADMIN LAYOUT ====================
 const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
   const { user, logout } = useAuth();
-  const role = user?.role || "";
-  const isAdmin = role === "admin";
-  const isSubAdmin = role === "sub-admin";
-  const isMerchant = role === "merchant";
-  const isSeller = role === "seller";
-  const roleLabel = isAdmin ? "Admin" : isSubAdmin ? "Sub-Admin" : isMerchant ? "Merchant" : "Seller";
-
+  const perms = getPermissions((user?.role || "customer") as any);
   const tabs: { id: string; label: string; icon: string }[] = [];
-  if (isAdmin) tabs.push(
-    { id: "admin-dashboard", label: "Dashboard", icon: "📊" },
-    { id: "admin-products", label: "Products", icon: "📦" },
-    { id: "admin-categories", label: "Categories", icon: "🏷️" },
-    { id: "admin-orders", label: "Orders", icon: "📋" },
-    { id: "admin-accounts", label: "Accounts", icon: "👥" },
-    { id: "admin-customers", label: "Customers", icon: "👤" },
-    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
-    { id: "admin-wishlisted", label: "Wishlist Analytics", icon: "💜" },
-    { id: "admin-reviews", label: "Reviews", icon: "⭐" },
-    { id: "admin-coupons", label: "Coupons", icon: "🎫" },
-    { id: "admin-reports", label: "Reports", icon: "📈" },
-    { id: "admin-logs", label: "Activity Logs", icon: "📝" },
-    { id: "admin-settings", label: "Settings", icon: "⚙️" },
-    { id: "admin-password", label: "Change Password", icon: "🔑" },
-  );
-  else if (isSubAdmin) tabs.push(
-    { id: "sub-dashboard", label: "Dashboard", icon: "📊" },
-    { id: "staff-products", label: "Products", icon: "📦" },
-    { id: "admin-orders", label: "Orders", icon: "📋" },
-    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
-    { id: "admin-password", label: "Change Password", icon: "🔑" },
-  );
-  else if (isMerchant) tabs.push(
-    { id: "merchant-dashboard", label: "Dashboard", icon: "📊" },
-    { id: "staff-products", label: "My Products", icon: "📦" },
-    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
-    { id: "admin-password", label: "Change Password", icon: "🔑" },
-  );
-  else if (isSeller) tabs.push(
-    { id: "seller-dashboard", label: "Dashboard", icon: "📊" },
-    { id: "staff-products", label: "My Listings", icon: "📦" },
-    { id: "admin-password", label: "Change Password", icon: "🔑" },
-  );
+
+  if (perms.canViewAllProducts) {
+    tabs.push({ id: user?.role === "admin" ? "admin-products" : "staff-products", label: perms.panelLabel === "Merchant" ? "My Products" : perms.panelLabel === "Seller" ? "My Listings" : "Products", icon: "📦" });
+    tabs.push({ id: "admin-categories", label: "Categories", icon: "🏷️" });
+  }
+  if (perms.canViewAllOrders) {
+    tabs.push({ id: "admin-orders", label: "Orders", icon: "📋" });
+  }
+  if (perms.canViewAccounts) {
+    tabs.push({ id: "admin-accounts", label: "Accounts", icon: "👥" });
+  }
+  if (perms.canViewMostOrdered) {
+    tabs.push({ id: "admin-ordered", label: "Most Ordered", icon: "🔥" });
+  }
+  if (perms.canViewMostWishlisted) {
+    tabs.push({ id: "admin-wishlisted", label: "Wishlist Analytics", icon: "💜" });
+  }
+  if (perms.canManageReviews) {
+    tabs.push({ id: "admin-reviews", label: "Reviews", icon: "⭐" });
+  }
+  if (perms.canManageCoupons) {
+    tabs.push({ id: "admin-coupons", label: "Coupons", icon: "🎫" });
+  }
+  if (perms.canViewReports) {
+    tabs.push({ id: "admin-reports", label: "Reports", icon: "📈" });
+  }
+  if (perms.canViewActivityLogs) {
+    tabs.push({ id: "admin-logs", label: "Activity Logs", icon: "📝" });
+  }
+  if (perms.canManageSettings) {
+    tabs.push({ id: "admin-settings", label: "Settings", icon: "⚙️" });
+  }
+  tabs.push({ id: "admin-password", label: "Change Password", icon: "🔑" });
 
   const currentTab = tabs.find(t => t.id === currentPage);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside className="admin-sidebar">
-        <div className="sidebar-brand">
-          <div className="logo">GV</div>
-          <div><div className="name">GameVault</div></div>
-          <span className="badge">{roleLabel}</span>
-        </div>
-        <nav className="sidebar-nav">
-          {tabs.map(t => (
-            <a key={t.id} className={currentPage === t.id ? "active" : ""} onClick={() => setCurrentPage(t.id)}>
-              <span className="ico">{t.icon}</span> {t.label}
-            </a>
-          ))}
-        </nav>
+        <div className="sidebar-brand"><div className="logo">GV</div><div><div className="name">GameVault</div></div><span className="badge">{perms.panelLabel}</span></div>
+        <nav className="sidebar-nav">{tabs.map(t => <a key={t.id} className={currentPage === t.id ? "active" : ""} onClick={() => setCurrentPage(t.id)}><span className="ico">{t.icon}</span> {t.label}</a>)}</nav>
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="avatar">{user?.name?.charAt(0)?.toUpperCase() || "?"}</div>
-            <div className="info">
-              <div className="un">{user?.name}</div>
-              <div className="rl">{roleLabel}</div>
-            </div>
-          </div>
-          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#f87171" }}>
-            <span className="ico">🚪</span> Logout
-          </a>
+          <div className="sidebar-user"><div className="avatar">{user?.name?.charAt(0)?.toUpperCase() || "?"}</div><div className="info"><div className="un">{user?.name}</div><div className="rl">{perms.panelLabel}</div></div></div>
+          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#f87171" }}><span className="ico">🚪</span> Logout</a>
         </div>
       </aside>
       <div className="admin-main">
-        <div className="admin-topbar">
-          <div><div className="breadcrumb">{roleLabel} <span>› {currentTab?.label || "Dashboard"}</span></div></div>
-          <div className="admin-topbar-right">
-            <button className="btn-back" onClick={() => setCurrentPage("home")}>← Back to Dashboard</button>
-          </div>
-        </div>
+        <div className="admin-topbar"><div><div className="breadcrumb">{perms.panelLabel} <span>› {currentTab?.label || "Dashboard"}</span></div></div><div className="admin-topbar-right"><button className="btn-back" onClick={() => setCurrentPage(perms.dashboardPage)}>← Back to Dashboard</button></div></div>
         {children}
       </div>
     </div>
@@ -234,20 +205,19 @@ function AppRouter() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
+  const perms = getPermissions((user?.role || "customer") as any);
+  const isStaff = isStaffRole(user?.role || "");
 
-  // Force admin/sub-admin/merchant to dashboard on login or page change
   useEffect(() => {
-    if (!user) return;
-    const role = user.role;
-    if (!role || role === "customer" || role === "seller") return;
-    // Admin, sub-admin, merchant → never show customer pages
+    if (!user || !isStaff) return;
+    if (perms.canPurchase || !perms.dashboardPage) return;
+    // Staff who can't purchase → redirect to dashboard
     if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-") && currentPage !== "login" && currentPage !== "signup") {
-      const dash = role === "admin" ? "admin-dashboard" : role === "sub-admin" ? "sub-dashboard" : role === "merchant" ? "merchant-dashboard" : "seller-dashboard";
-      setCurrentPage(dash);
+      setCurrentPage(perms.dashboardPage);
     }
   }, [user, currentPage]);
 
-  if (!user || user.role === "customer" || user.role === "seller") {
+  if (!user || perms.canPurchase) {
     return (
       <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
         selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
