@@ -43,47 +43,81 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
   const isSubAdmin = role === "sub-admin";
   const isMerchant = role === "merchant";
   const isSeller = role === "seller";
-  const isStaff = ["sub-admin", "merchant", "seller"].includes(role);
-  
-  let tabs: { id: string; label: string }[] = [];
-  if (isAdmin) tabs = [
-    { id: "admin-dashboard", label: "Dashboard" }, { id: "admin-products", label: "Products" },
-    { id: "admin-orders", label: "Orders" }, { id: "admin-users", label: "Users" },
-    { id: "admin-ordered", label: "Most Ordered" }, { id: "admin-wishlisted", label: "Most Wishlisted" },
-    { id: "admin-password", label: "Change Password" },
-  ];
-  else if (isSubAdmin) tabs = [
-    { id: "sub-dashboard", label: "Dashboard" }, { id: "staff-products", label: "Products" },
-    { id: "admin-orders", label: "Orders" }, { id: "admin-ordered", label: "Most Ordered" },
-    { id: "admin-password", label: "Change Password" },
-  ];
-  else if (isMerchant) tabs = [
-    { id: "merchant-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Products" },
-    { id: "admin-ordered", label: "Most Ordered" }, { id: "admin-password", label: "Change Password" },
-  ];
-  else if (isSeller) tabs = [
-    { id: "seller-dashboard", label: "Dashboard" }, { id: "staff-products", label: "My Listings" },
-    { id: "admin-password", label: "Change Password" },
-  ];
+
+  const tabs: { id: string; label: string; icon: string }[] = [];
+  if (isAdmin) tabs.push(
+    { id: "admin-dashboard", label: "Dashboard", icon: "📊" },
+    { id: "admin-products", label: "Products", icon: "📦" },
+    { id: "admin-orders", label: "Orders", icon: "📋" },
+    { id: "admin-users", label: "Users", icon: "👥" },
+    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
+    { id: "admin-wishlisted", label: "Most Wishlisted", icon: "💜" },
+    { id: "admin-password", label: "Change Password", icon: "🔑" },
+  );
+  else if (isSubAdmin) tabs.push(
+    { id: "sub-dashboard", label: "Dashboard", icon: "📊" },
+    { id: "staff-products", label: "Products", icon: "📦" },
+    { id: "admin-orders", label: "Orders", icon: "📋" },
+    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
+    { id: "admin-password", label: "Change Password", icon: "🔑" },
+  );
+  else if (isMerchant) tabs.push(
+    { id: "merchant-dashboard", label: "Dashboard", icon: "📊" },
+    { id: "staff-products", label: "My Products", icon: "📦" },
+    { id: "admin-ordered", label: "Most Ordered", icon: "🔥" },
+    { id: "admin-password", label: "Change Password", icon: "🔑" },
+  );
+  else if (isSeller) tabs.push(
+    { id: "seller-dashboard", label: "Dashboard", icon: "📊" },
+    { id: "staff-products", label: "My Listings", icon: "📦" },
+    { id: "admin-password", label: "Change Password", icon: "🔑" },
+  );
+
+  const roleLabel = isAdmin ? "Admin" : isSubAdmin ? "Sub-Admin" : isMerchant ? "Merchant" : "Seller";
+  const currentTab = tabs.find(t => t.id === currentPage);
+  const pageTitle = currentTab?.label || "Dashboard";
+
   return (
-    <div className="admin-layout">
-      <div className="admin-topbar">
-        <div className="admin-topbar-left">
-          <span className="admin-topbar-badge">{role === "admin" ? "Admin" : role === "sub-admin" ? "Sub-Admin" : role === "merchant" ? "Merchant" : "Seller"}</span>
-          <span className="admin-topbar-title">GameVault Admin Panel</span>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <aside className="admin-sidebar">
+        <div className="sidebar-brand">
+          <div className="logo">GV</div>
+          <div>
+            <div className="name">GameVault</div>
+          </div>
+          <span className="badge">{roleLabel}</span>
         </div>
-        <div className="admin-topbar-right">
-          <span>{user?.name}</span>
-          <button className="btn btn-sm btn-sec" onClick={() => { logout(); setCurrentPage("home"); }}>Logout</button>
-          <button className="btn btn-sm btn-sec" onClick={() => setCurrentPage("home")}>← Store</button>
+        <nav className="sidebar-nav">
+          {tabs.map(t => (
+            <a key={t.id} className={currentPage === t.id ? "active" : ""} onClick={() => setCurrentPage(t.id)}>
+              <span className="ico">{t.icon}</span> {t.label}
+            </a>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="avatar">{user?.name?.charAt(0)?.toUpperCase() || "?"}</div>
+            <div className="info">
+              <div className="un">{user?.name}</div>
+              <div className="rl">{roleLabel}</div>
+            </div>
+          </div>
+          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#ef4444" }}>
+            <span className="ico">🚪</span> Logout
+          </a>
         </div>
+      </aside>
+      <div className="admin-main">
+        <div className="admin-topbar">
+          <div>
+            <div className="breadcrumb">Admin <span>› {pageTitle}</span></div>
+          </div>
+          <div className="admin-topbar-right">
+            <button className="btn-back" onClick={() => setCurrentPage("home")}>← Back to Store</button>
+          </div>
+        </div>
+        {children}
       </div>
-      <div className="admin-nav">
-        {tabs.map(t => (
-          <button key={t.id} className={`admin-nav-btn ${currentPage === t.id ? "active" : ""}`} onClick={() => setCurrentPage(t.id)}>{t.label}</button>
-        ))}
-      </div>
-      {children}
     </div>
   );
 };
