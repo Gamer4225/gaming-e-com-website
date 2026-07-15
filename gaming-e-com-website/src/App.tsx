@@ -1,5 +1,4 @@
-// App.tsx - Main application entry point
-// Manages page routing and global state
+// App.tsx - Clean separation: Admin Panel vs Customer Store
 import { useState, useEffect, type ReactNode } from "react";
 import { CartProvider, useCart } from "./context/CartContext";
 import { ProductCatalogProvider } from "./context/ProductCatalogContext";
@@ -36,13 +35,15 @@ import AdminMostWishlisted from "./pages/AdminMostWishlisted";
 import CartDrawer from "./components/CartDrawer/CartDrawer";
 import "./styles/global.css";
 
+// ==================== ADMIN LAYOUT ====================
 const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: string; setCurrentPage: (p: string) => void; children: ReactNode }) => {
   const { user, logout } = useAuth();
-  const role = user?.role || "customer";
+  const role = user?.role || "";
   const isAdmin = role === "admin";
   const isSubAdmin = role === "sub-admin";
   const isMerchant = role === "merchant";
   const isSeller = role === "seller";
+  const roleLabel = isAdmin ? "Admin" : isSubAdmin ? "Sub-Admin" : isMerchant ? "Merchant" : "Seller";
 
   const tabs: { id: string; label: string; icon: string }[] = [];
   if (isAdmin) tabs.push(
@@ -73,18 +74,14 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
     { id: "admin-password", label: "Change Password", icon: "🔑" },
   );
 
-  const roleLabel = isAdmin ? "Admin" : isSubAdmin ? "Sub-Admin" : isMerchant ? "Merchant" : "Seller";
   const currentTab = tabs.find(t => t.id === currentPage);
-  const pageTitle = currentTab?.label || "Dashboard";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
           <div className="logo">GV</div>
-          <div>
-            <div className="name">GameVault</div>
-          </div>
+          <div><div className="name">GameVault</div></div>
           <span className="badge">{roleLabel}</span>
         </div>
         <nav className="sidebar-nav">
@@ -102,16 +99,14 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
               <div className="rl">{roleLabel}</div>
             </div>
           </div>
-          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#ef4444" }}>
+          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#f87171" }}>
             <span className="ico">🚪</span> Logout
           </a>
         </div>
       </aside>
       <div className="admin-main">
         <div className="admin-topbar">
-          <div>
-            <div className="breadcrumb">Admin <span>› {pageTitle}</span></div>
-          </div>
+          <div><div className="breadcrumb">{roleLabel} <span>› {currentTab?.label || "Dashboard"}</span></div></div>
           <div className="admin-topbar-right">
             <button className="btn-back" onClick={() => setCurrentPage("home")}>← Back to Store</button>
           </div>
@@ -122,197 +117,124 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
   );
 };
 
-function AppContent() {
-  const [currentPage, setCurrentPage] = useState("home");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+// ==================== CUSTOMER STORE ====================
+function CustomerStore({ currentPage, setCurrentPage, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery }: {
+  currentPage: string; setCurrentPage: (p: string) => void;
+  selectedCategory: string; setSelectedCategory: (c: string) => void;
+  searchQuery: string; setSearchQuery: (q: string) => void;
+}) {
   const { toast } = useCart();
   const { selectedProduct, clearSelection } = useProductDetail();
+  useEffect(() => { if (selectedProduct) setCurrentPage("detail"); }, [selectedProduct]);
 
-  useEffect(() => {
-    if (selectedProduct) {
-      setCurrentPage("detail");
-    }
-  }, [selectedProduct]);
-
-  const handleSetCurrentPage = (page: string) => {
-    if (page !== "detail") {
-      clearSelection();
-    }
+  const go = (page: string) => {
+    if (page !== "detail") clearSelection();
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const isFullWidthPage =
-    currentPage === "home" ||
-    currentPage === "checkout" ||
-    currentPage === "order-success" ||
-    currentPage === "about" ||
-    currentPage === "contact" ||
-    currentPage === "faq" ||
-    currentPage === "orders" ||
-    currentPage === "wishlist" ||
-    currentPage === "login" ||
-    currentPage === "signup" ||
-    currentPage === "admin-dashboard" ||
-    currentPage === "admin-products" ||
-    currentPage === "admin-orders" ||
-    currentPage === "admin-users" ||
-    currentPage === "admin-password" ||
-    currentPage === "admin-ordered" ||
-    currentPage === "admin-wishlisted" ||
-    currentPage === "staff-dashboard" ||
-    currentPage === "sub-dashboard" ||
-    currentPage === "merchant-dashboard" ||
-    currentPage === "seller-dashboard" ||
-    currentPage === "staff-products" ||
-    currentPage === "account";
+  const isFull = currentPage === "home" || currentPage === "checkout" || currentPage === "order-success" ||
+    currentPage === "about" || currentPage === "contact" || currentPage === "faq" ||
+    currentPage === "orders" || currentPage === "wishlist" || currentPage === "login" || currentPage === "signup" || currentPage === "account";
 
-  const renderPage = () => {
+  const render = () => {
     switch (currentPage) {
-      case "detail":
-        return <ProductDetail setCurrentPage={handleSetCurrentPage} />;
-      case "home":
-        return (
-          <Home
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-            setSearchQuery={setSearchQuery}
-          />
-        );
-      case "products":
-        return (
-          <Products
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            setCurrentPage={handleSetCurrentPage}
-          />
-        );
-      case "checkout":
-        return <Checkout setCurrentPage={handleSetCurrentPage} />;
-      case "order-success":
-        return (
-          <OrderSuccess
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-          />
-        );
-      case "about":
-        return (
-          <About
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-          />
-        );
-      case "contact":
-        return <Contact setCurrentPage={handleSetCurrentPage} />;
-      case "faq":
-        return <FAQ setCurrentPage={handleSetCurrentPage} />;
-      case "orders":
-        return (
-          <Orders
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-          />
-        );
-      case "wishlist":
-        return (
-          <Wishlist
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-          />
-        );
-      case "login":
-        return <Login setCurrentPage={handleSetCurrentPage} />;
-      case "signup":
-        return <Signup setCurrentPage={handleSetCurrentPage} />;
-      case "admin-dashboard":
-        return <AdminDashboard setCurrentPage={handleSetCurrentPage} activePage="admin-dashboard" />;
-      case "admin-products":
-        return <AdminProducts setCurrentPage={handleSetCurrentPage} activePage="admin-products" />;
-      case "admin-orders":
-        return <AdminOrders setCurrentPage={handleSetCurrentPage} activePage="admin-orders" />;
-      case "admin-users":
-        return <AdminUsers setCurrentPage={handleSetCurrentPage} activePage="admin-users" />;
-      case "admin-password":
-        return <AdminChangePassword setCurrentPage={handleSetCurrentPage} activePage="admin-password" />;
-      case "admin-ordered":
-        return <AdminMostOrdered setCurrentPage={handleSetCurrentPage} activePage="admin-ordered" />;
-      case "admin-wishlisted":
-        return <AdminMostWishlisted setCurrentPage={handleSetCurrentPage} activePage="admin-wishlisted" />;
-      case "sub-dashboard":
-        return <SubAdminDashboard setCurrentPage={handleSetCurrentPage} />;
-      case "merchant-dashboard":
-        return <MerchantDashboard setCurrentPage={handleSetCurrentPage} />;
-      case "seller-dashboard":
-        return <SellerDashboard setCurrentPage={handleSetCurrentPage} />;
-      case "staff-dashboard":
-        return <SellerDashboard setCurrentPage={handleSetCurrentPage} />;
-      case "staff-products":
-        return <StaffProducts setCurrentPage={handleSetCurrentPage} />;
-      case "account":
-        return <CustomerAccount setCurrentPage={handleSetCurrentPage} />;
-      default:
-        return (
-          <Home
-            setCurrentPage={handleSetCurrentPage}
-            setSelectedCategory={setSelectedCategory}
-            setSearchQuery={setSearchQuery}
-          />
-        );
+      case "detail": return <ProductDetail setCurrentPage={go} />;
+      case "home": return <Home setCurrentPage={go} setSelectedCategory={setSelectedCategory} setSearchQuery={setSearchQuery} />;
+      case "products": return <Products selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setCurrentPage={go} />;
+      case "checkout": return <Checkout setCurrentPage={go} />;
+      case "order-success": return <OrderSuccess setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
+      case "about": return <About setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
+      case "contact": return <Contact setCurrentPage={go} />;
+      case "faq": return <FAQ setCurrentPage={go} />;
+      case "orders": return <Orders setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
+      case "wishlist": return <Wishlist setCurrentPage={go} setSelectedCategory={setSelectedCategory} />;
+      case "login": return <Login setCurrentPage={go} />;
+      case "signup": return <Signup setCurrentPage={go} />;
+      case "account": return <CustomerAccount setCurrentPage={go} />;
+      default: return <Home setCurrentPage={go} setSelectedCategory={setSelectedCategory} setSearchQuery={setSearchQuery} />;
     }
   };
 
   return (
     <div className="app">
-      <Navbar
-        currentPage={currentPage}
-        setCurrentPage={handleSetCurrentPage}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        setSelectedCategory={setSelectedCategory}
-      />
-
-      {toast && (
-        <div className="toast-container">
-          <div className="toast">{toast}</div>
-        </div>
-      )}
-
-      {isFullWidthPage ? (
-        <>
-          {currentPage.startsWith("admin-") ? (
-            <AdminLayout currentPage={currentPage} setCurrentPage={handleSetCurrentPage}>
-              {renderPage()}
-            </AdminLayout>
-          ) : (
-            <div className="page-content-full">{renderPage()}</div>
-          )}
-        </>
-      ) : (
+      <Navbar currentPage={currentPage} setCurrentPage={go} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedCategory={setSelectedCategory} />
+      {toast && <div className="toast-container"><div className="toast">{toast}</div></div>}
+      {isFull ? <div className="page-content-full">{render()}</div> : (
         <div className="page-layout">
-          <Sidebar
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            setCurrentPage={handleSetCurrentPage}
-          />
-          <main className="page-content">{renderPage()}</main>
+          <Sidebar selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} setCurrentPage={go} />
+          <main className="page-content">{render()}</main>
         </div>
       )}
-
-      <Footer
-        setCurrentPage={handleSetCurrentPage}
-        setSelectedCategory={setSelectedCategory}
-      />
-
-      <CartDrawer
-        setCurrentPage={handleSetCurrentPage}
-        setSelectedCategory={setSelectedCategory}
-      />
+      <Footer setCurrentPage={go} setSelectedCategory={setSelectedCategory} />
+      <CartDrawer setCurrentPage={go} setSelectedCategory={setSelectedCategory} />
     </div>
   );
+}
+
+// ==================== ADMIN PANEL ====================
+function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setCurrentPage: (p: string) => void }) {
+  const { selectedProduct, clearSelection } = useProductDetail();
+  useEffect(() => { if (selectedProduct) setCurrentPage("detail"); }, [selectedProduct]);
+
+  const go = (page: string) => {
+    if (page !== "detail") clearSelection();
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const render = () => {
+    switch (currentPage) {
+      case "admin-dashboard": return <AdminDashboard setCurrentPage={go} />;
+      case "admin-products": return <AdminProducts setCurrentPage={go} />;
+      case "admin-orders": return <AdminOrders setCurrentPage={go} />;
+      case "admin-users": return <AdminUsers setCurrentPage={go} />;
+      case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
+      case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
+      case "admin-password": return <AdminChangePassword setCurrentPage={go} />;
+      case "sub-dashboard": return <SubAdminDashboard setCurrentPage={go} />;
+      case "merchant-dashboard": return <MerchantDashboard setCurrentPage={go} />;
+      case "seller-dashboard": return <SellerDashboard setCurrentPage={go} />;
+      case "staff-products": return <StaffProducts setCurrentPage={go} />;
+      default: return <AdminDashboard setCurrentPage={go} />;
+    }
+  };
+
+  return (
+    <AdminLayout currentPage={currentPage} setCurrentPage={go}>
+      {render()}
+    </AdminLayout>
+  );
+}
+
+// ==================== ROOT ROUTER ====================
+function AppRouter() {
+  const [currentPage, setCurrentPage] = useState("home");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
+
+  // Force admin/sub-admin/merchant to dashboard on login or page change
+  useEffect(() => {
+    if (!user) return;
+    const role = user.role;
+    if (!role || role === "customer" || role === "seller") return;
+    // Admin, sub-admin, merchant → never show customer pages
+    if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-")) {
+      const dash = role === "admin" ? "admin-dashboard" : role === "sub-admin" ? "sub-dashboard" : role === "merchant" ? "merchant-dashboard" : "seller-dashboard";
+      setCurrentPage(dash);
+    }
+  }, [user, currentPage]);
+
+  if (!user || user.role === "customer" || user.role === "seller") {
+    return (
+      <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
+        selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+        searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+    );
+  }
+
+  return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
 }
 
 function App() {
@@ -322,7 +244,7 @@ function App() {
         <CartProvider>
           <WishlistProvider>
             <ProductDetailProvider>
-              <AppContent />
+              <AppRouter />
             </ProductDetailProvider>
           </WishlistProvider>
         </CartProvider>
