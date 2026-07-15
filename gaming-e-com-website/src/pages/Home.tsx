@@ -2,6 +2,7 @@
 import { useMemo, type ReactNode } from "react";
 import ProductCard from "../components/ProductCard/ProductCard";
 import BrandMarquee from "../components/BrandMarquee/BrandMarquee";
+import RecentlyViewedRow from "../components/RecentlyViewedRow";
 import { useProductCatalog } from "../context/ProductCatalogContext";
 import {
   CategoryIcon,
@@ -149,6 +150,7 @@ function Home({ setCurrentPage, setSelectedCategory, setSearchQuery }: HomeProps
         </div>
         <BrandMarquee items={brandMarqueeItems} speed={28} pauseOnHover />
       </section>
+      <RecentlyViewedRow setCurrentPage={setCurrentPage} />
 
       {/* ===== BEST SELLERS ===== */}
       <section className="section">

@@ -1324,6 +1324,24 @@ app.get("/api/admin/categories", adminRequired, (_req, res) => {
   res.json(rows);
 });
 
+
+app.get("/api/admin/brand-stats", adminRequired, (_req, res) => {
+  const rows = db.prepare(`
+    SELECT p.brand,
+      COUNT(DISTINCT p.id) as products,
+      SUM(CASE WHEN p.stock > 0 THEN 1 ELSE 0 END) as stock,
+      SUM(CASE WHEN p.stock = 0 THEN 1 ELSE 0 END) as oos,
+      COALESCE(SUM(oi.quantity), 0) as sold,
+      COALESCE(SUM(oi.price * oi.quantity), 0) as revenue,
+      ROUND(AVG(p.rating), 1) as rating
+    FROM products p
+    LEFT JOIN order_items oi ON oi.productId = p.id
+    GROUP BY p.brand
+    ORDER BY products DESC
+  `).all();
+  res.json(rows);
+});
+
 app.get("/api/admin/brands", adminRequired, (_req, res) => {
   const brands = db.prepare("SELECT DISTINCT brand FROM products ORDER BY brand").all();
   res.json(brands.map((b) => b.brand));

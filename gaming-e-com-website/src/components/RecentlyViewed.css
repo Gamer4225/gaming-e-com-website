@@ -1,0 +1,5 @@
+.recently-viewed-scroll { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+.recently-viewed-scroll::-webkit-scrollbar { height: 4px; }
+.recently-viewed-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+.recently-viewed-card { flex: 0 0 260px; scroll-snap-align: start; }
+@media (max-width: 480px) { .recently-viewed-card { flex: 0 0 85vw; } }
