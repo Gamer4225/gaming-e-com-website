@@ -1,7 +1,7 @@
-// WishlistContext.tsx — Server is source of truth, localStorage is offline cache
+// WishlistContext.tsx — Server is source of truth via api.wishlist
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { API_BASE } from "./ProductCatalogContext";
 import { useAuth } from "./AuthContext";
+import { api } from "../services/api";
 
 interface WishlistContextValue { wishlistIds: number[]; isInWishlist: (id: number) => boolean; toggleWishlist: (id: number) => void; removeFromWishlist: (id: number) => void; clearWishlist: () => void; wishlistCount: number }
 
@@ -22,21 +22,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   // On mount (or token change): load from server as source of truth
   useEffect(() => {
-    const url = token ? `${API_BASE}/api/my-wishlist` : `${API_BASE}/api/wishlist`;
-    const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
-    fetch(url, { headers })
-      .then(r => r.json())
-      .then(data => { if (data?.ids && Array.isArray(data.ids)) setIds(data.ids.filter((n:any) => typeof n === "number")); })
-      .catch(() => {});
+    const fetcher = token ? api.wishlist.listMine(token) : api.wishlist.list();
+    fetcher.then(data => { if (data?.ids && Array.isArray(data.ids)) setIds(data.ids.filter((n:any) => typeof n === "number")); }).catch(() => {});
   }, [token]);
 
-  // Persist to localStorage as offline cache
+  // Offline cache
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(ids)); }, [ids]);
 
   const toggleWishlist = useCallback((id: number) => {
     setIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      fetch(`${API_BASE}/api/wishlist/${id}`, { method: "POST" }).catch(() => {});
+      api.wishlist.toggle(id).catch(() => {});
       return next;
     });
   }, []);

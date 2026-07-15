@@ -1,7 +1,7 @@
-// Orders.tsx — Fetches from server. Logged-in users see their own orders.
+// Orders.tsx — Reads from server database via api.orders
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { API_BASE } from "../context/ProductCatalogContext";
+import { api } from "../services/api";
 import ProductImage from "../components/ProductImage/ProductImage";
 import "./StaticPages.css";
 
@@ -16,13 +16,8 @@ function Orders({ setCurrentPage, setSelectedCategory }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const url = token ? `${API_BASE}/api/my-orders` : `${API_BASE}/api/orders`;
-    const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
-    fetch(url, { headers })
-      .then(r => r.json())
-      .then(d => setOrders(Array.isArray(d) ? d : []))
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
+    const fetcher = token ? api.orders.listMine(token) : api.orders.listPublic();
+    fetcher.then(d => setOrders(Array.isArray(d) ? d : [])).catch(() => setOrders([])).finally(() => setLoading(false));
   }, [token]);
 
   if (loading) return <div className="static-page"><h1>My Orders</h1><p style={{color:"var(--text-secondary)"}}>Loading...</p></div>;
@@ -42,20 +37,18 @@ function Orders({ setCurrentPage, setSelectedCategory }: Props) {
 
   const statusBadge = (s: string) => {
     const colors: Record<string,string> = {Processing:"#f59e0b",Packaging:"#3b82f6",Shipping:"#8b5cf6",Delivering:"#ec4899","Parceled/Arrived":"#22c55e",Cancelled:"#ef4444"};
-    return <span style={{display:"inline-block",padding:"2px 8px",borderRadius:3,fontSize:".7rem",fontWeight:700,textTransform:"uppercase",background:`${colors[s]||"#888"}20`,color:colors[s]||"#888",marginLeft:6}}>{s}</span>;
+    return <span style={{display:"inline-block",padding:"2px 8px",borderRadius:3,fontSize:".7rem",fontWeight:700,textTransform:"uppercase",marginLeft:6,background:(colors[s]||"#888")+"20",color:colors[s]||"#888"}}>{s}</span>;
   };
 
   return (
     <div className="static-page static-page-wide">
       <button className="static-back" onClick={() => setCurrentPage("home")}>← Back to Home</button>
       <h1>{user ? `${user.name}'s Orders` : "My Orders"}</h1>
-      <p className="static-lead">{orders.length} order{orders.length>1?"s":""} from the database</p>
-
+      <p className="static-lead">{orders.length} order{orders.length>1?"s":""} from database</p>
       {orders.map(o => (
         <article key={o.orderId} className="order-card">
           <div className="order-card-head">
-            <div>
-              <div className="order-id">{o.orderId} {statusBadge(o.status)}</div>
+            <div><div className="order-id">{o.orderId} {statusBadge(o.status)}</div>
               <div className="order-meta">{new Date(o.placedAt).toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})} · {pLabels[o.paymentMethod]||o.paymentMethod} · Est. {o.estimatedDelivery}</div>
             </div>
             <div className="order-meta">{o.address?.fullName} · {o.address?.city}, {o.address?.pincode}</div>

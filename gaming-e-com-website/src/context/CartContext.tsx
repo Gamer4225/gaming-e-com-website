@@ -12,6 +12,7 @@ import {
 import { type Product } from "./ProductDetailContext";
 import { useAuth } from "./AuthContext";
 import { useProductCatalog, API_BASE } from "./ProductCatalogContext";
+import { api } from "../services/api";
 
 export interface CartItem extends Product {
   quantity: number;
