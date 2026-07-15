@@ -21,14 +21,13 @@ import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminProducts from "./pages/AdminProducts";
+import ProductManagement from "./pages/ProductManagement";
 import AdminOrders from "./pages/AdminOrders";
 import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
 import SubAdminDashboard from "./pages/SubAdminDashboard";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
-import StaffProducts from "./pages/StaffProducts";
 import CustomerAccount from "./pages/CustomerAccount";
 import AdminMostOrdered from "./pages/AdminMostOrdered";
 import AdminMostWishlisted from "./pages/AdminMostWishlisted";
@@ -217,7 +216,7 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
       case "sub-dashboard": return <SubAdminDashboard setCurrentPage={go} />;
       case "merchant-dashboard": return <MerchantDashboard setCurrentPage={go} />;
       case "seller-dashboard": return <SellerDashboard setCurrentPage={go} />;
-      case "staff-products": return <StaffProducts setCurrentPage={go} />;
+      case "staff-products": return <ProductManagement setCurrentPage={go} />;
       default: return <AdminDashboard setCurrentPage={go} />;
     }
   };
