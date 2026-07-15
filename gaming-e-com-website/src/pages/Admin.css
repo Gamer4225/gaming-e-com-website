@@ -177,3 +177,15 @@
 
 /* Bar chart tooltip-style hover */
 .admin-body [title]:hover { opacity: .85; }
+
+.sidebar-footer a[style*="marginTop"] { 
+  display: flex !important; align-items: center; gap: 8px; 
+  padding: 10px 12px; border-radius: 8px; 
+  background: rgba(239,68,68,.08); 
+  border: 1px solid rgba(239,68,68,.15);
+  transition: all .2s; font-weight: 600; font-size: .85rem;
+  text-decoration: none;
+}
+.sidebar-footer a[style*="marginTop"]:hover { 
+  background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.3);
+}

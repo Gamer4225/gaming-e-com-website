@@ -232,7 +232,6 @@ function mapProduct(row) {
   };
 }
 
-
 function publicUser(row) {
   if (!row) return null;
   return {
@@ -386,7 +385,6 @@ function recommendForCart(db, cartItems, limit = 6) {
   return recs;
 }
 
-
 const db = openDb();
 ensureSchema(db);
 const seeded = seedIfEmpty(db);
@@ -395,11 +393,14 @@ console.log(`SQLite ready: ${db.prepare("SELECT COUNT(*) as c FROM products").ge
 // Seed default admin account if no admin exists
 const adminExists = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
 if (!adminExists) {
-  const adminHash = bcrypt.hashSync("admin123", 10);
-  db.prepare(
-    "INSERT INTO users (name, email, phone, passwordHash, role, brand, sellerId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run("Admin", "admin@gamevault.com", "", adminHash, "admin", "", "", new Date().toISOString());
-  console.log("Default admin seeded: admin@gamevault.com / admin123");
+  const h = bcrypt.hashSync("admin123", 10);
+  const ins = db.prepare("INSERT INTO users (name, email, phone, passwordHash, role, brand, sellerId, createdAt) VALUES (?,?,?,?,?,?,?,?)");
+  ins.run("Admin", "admin@gamevault.com", "", h, "admin", "", "", new Date().toISOString());
+  ins.run("Sub Admin", "subadmin@gamevault.com", "", h, "sub-admin", "", "", new Date().toISOString());
+  ins.run("ASUS Rep", "merchant@gamevault.com", "", h, "merchant", "ASUS", "", new Date().toISOString());
+  ins.run("Seller One", "seller@gamevault.com", "", h, "seller", "", "S001", new Date().toISOString());
+  console.log("Default accounts seeded (all password: admin123)");
+  console.log("  admin@gamevault.com | subadmin@gamevault.com | merchant@gamevault.com | seller@gamevault.com");
 }
 
 const app = express();
@@ -722,7 +723,6 @@ app.get("/api/orders/:orderId", (req, res) => {
   });
 });
 
-
 // ---------- Auth ----------
 app.post("/api/auth/signup", (req, res) => {
   const { name, email, phone, password, role } = req.body || {};
@@ -793,7 +793,6 @@ app.post("/api/recommendations/cart", (req, res) => {
   const recs = recommendForCart(db, items, limit);
   res.json({ items: recs });
 });
-
 
 // ---------- Admin ----------
 app.get("/api/admin/stats", adminRequired, (_req, res) => {

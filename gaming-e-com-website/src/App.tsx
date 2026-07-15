@@ -23,8 +23,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProductManagement from "./pages/ProductManagement";
+// ProductManagement is the unified component for all roles
 import AdminOrders from "./pages/AdminOrders";
-import AdminUsers from "./pages/AdminUsers";
 import AdminChangePassword from "./pages/AdminChangePassword";
 import SubAdminDashboard from "./pages/SubAdminDashboard";
 import MerchantDashboard from "./pages/MerchantDashboard";
@@ -90,7 +90,7 @@ const AdminLayout = ({ currentPage, setCurrentPage, children }: { currentPage: s
         <nav className="sidebar-nav">{tabs.map(t => <a key={t.id} className={currentPage === t.id ? "active" : ""} onClick={() => setCurrentPage(t.id)}><span className="ico">{t.icon}</span> {t.label}</a>)}</nav>
         <div className="sidebar-footer">
           <div className="sidebar-user"><div className="avatar">{user?.name?.charAt(0)?.toUpperCase() || "?"}</div><div className="info"><div className="un">{user?.name}</div><div className="rl">{perms.panelLabel}</div></div></div>
-          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#f87171" }}><span className="ico">🚪</span> Logout</a>
+          <a onClick={() => { logout(); setCurrentPage("home"); }} style={{ marginTop: 8, color: "#f87171" }}><span className="ico">↪</span> Logout</a>
         </div>
       </aside>
       <div className="admin-main">
@@ -170,15 +170,14 @@ function AdminPanel({ currentPage, setCurrentPage }: { currentPage: string; setC
   const render = () => {
     switch (currentPage) {
       case "admin-dashboard": return <AdminDashboard setCurrentPage={go} />;
-      case "admin-products": return <AdminProducts setCurrentPage={go} />;
+      case "admin-products": return <ProductManagement setCurrentPage={go} />;
       case "admin-orders": return <AdminOrders setCurrentPage={go} />;
       case "admin-users": return <AdminUsers setCurrentPage={go} />;
       case "admin-ordered": return <AdminMostOrdered setCurrentPage={go} />;
       case "admin-wishlisted": return <AdminMostWishlisted setCurrentPage={go} />;
       case "admin-categories": return <AdminCategories setCurrentPage={go} />;
       case "admin-accounts": return <AdminAccounts setCurrentPage={go} />;
-      case "admin-customers": return <AdminUsers setCurrentPage={go} />;
-      case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
+            case "admin-reviews": return <AdminReviews setCurrentPage={go} />;
       case "admin-coupons": return <AdminCoupons setCurrentPage={go} />;
       case "admin-logs": return <AdminActivityLogs setCurrentPage={go} />;
       case "admin-reports": return <AdminReports setCurrentPage={go} />;
@@ -204,20 +203,24 @@ function AppRouter() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const perms = getPermissions((user?.role || "customer") as any);
   const isStaff = isStaffRole(user?.role || "");
 
+  // Show loading while auth is checking
+  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-secondary)" }}>Loading...</div>;
+
+  // Staff roles → redirect to dashboard if not already on staff pages
   useEffect(() => {
     if (!user || !isStaff) return;
-    if (perms.canPurchase || !perms.dashboardPage) return;
-    // Staff who can't purchase → redirect to dashboard
+    if (perms.canPurchase) return; // seller can use store
     if (!currentPage.startsWith("admin-") && !currentPage.startsWith("sub-") && !currentPage.startsWith("merchant-") && !currentPage.startsWith("seller-") && !currentPage.startsWith("staff-") && currentPage !== "login" && currentPage !== "signup") {
       setCurrentPage(perms.dashboardPage);
     }
   }, [user, currentPage]);
 
-  if (!user || perms.canPurchase) {
+  // Not logged in → customer store
+  if (!user) {
     return (
       <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
         selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
@@ -225,6 +228,16 @@ function AppRouter() {
     );
   }
 
+  // Seller or Customer → customer store
+  if (perms.canPurchase) {
+    return (
+      <CustomerStore currentPage={currentPage} setCurrentPage={setCurrentPage}
+        selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+        searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+    );
+  }
+
+  // Admin, Sub-Admin, Merchant → admin panel only
   return <AdminPanel currentPage={currentPage} setCurrentPage={setCurrentPage} />;
 }
 
