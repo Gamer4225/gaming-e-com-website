@@ -520,7 +520,7 @@ app.post("/api/orders", authOptional, (req, res) => {
     INSERT INTO orders (
       orderId, paymentMethod, subtotal, gstAmount, totalSavings, grandTotal, itemCount,
       placedAt, estimatedDelivery, fullName, phone, email, addressLine1, addressLine2,
-      city, state, pincode
+      city, state, pincode, userId
     ) VALUES (
       @orderId, @paymentMethod, @subtotal, @gstAmount, @totalSavings, @grandTotal, @itemCount,
       @placedAt, @estimatedDelivery, @fullName, @phone, @email, @addressLine1, @addressLine2,
@@ -608,6 +608,7 @@ app.post("/api/orders", authOptional, (req, res) => {
         1000 + Math.random() * 9000
       )}`;
       const placedAt = new Date().toISOString();
+      console.log(`[ORDER] Placing order: ${orderId} - ${itemCount} items - ₹${grandTotal}`);
       const orderUserId = req.user ? req.user.id : null;
 
       insertOrder.run({
@@ -1038,9 +1039,11 @@ app.post("/api/wishlist/:id", (req, res) => {
   const existing = db.prepare("SELECT * FROM wishlists WHERE productId = ?").get(productId);
   if (existing) {
     db.prepare("DELETE FROM wishlists WHERE productId = ?").run(productId);
+    console.log(`[WISHLIST] REMOVED product #${productId} - total wishlist items: ${db.prepare('SELECT COUNT(*) as c FROM wishlists').get().c}`);
     res.json({ added: false, productId });
   } else {
     db.prepare("INSERT INTO wishlists (productId, count, lastAdded) VALUES (?, 1, ?)").run(productId, new Date().toISOString());
+    console.log(`[WISHLIST] ADDED product #${productId} - total wishlist items: ${db.prepare('SELECT COUNT(*) as c FROM wishlists').get().c}`);
     res.json({ added: true, productId });
   }
   console.log("Wishlist toggle: product " + productId + (existing ? " removed, count=" + (db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c) : " added, count=" + db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c));
@@ -1056,7 +1059,9 @@ app.post("/api/wishlist/sync", (req, res) => {
   // Add new items
   const now = new Date().toISOString();
   for (const nid of newIds) { if (!existing.has(nid)) db.prepare("INSERT OR IGNORE INTO wishlists (productId, count, lastAdded) VALUES (?, 1, ?)").run(nid, now); }
-  res.json({ ok: true, synced: db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c });
+  const syncCount = db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c;
+  console.log(`[WISHLIST SYNC] Received ${newIds.size} IDs from client - server has ${syncCount} total`);
+  res.json({ ok: true, synced: syncCount });
 });
 
 // Most ordered products
