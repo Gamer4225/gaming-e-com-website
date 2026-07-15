@@ -1254,7 +1254,7 @@ app.get("/api/admin/activity-logs", adminRequired, (req, res) => {
 // ---------- Settings ----------
 app.get("/api/admin/settings", adminRequired, (_req, res) => {
   const rows = db.prepare("SELECT * FROM settings").all();
-  const obj: Record<string, string> = {};
+  const obj = {};
   rows.forEach((r) => { obj[r.key] = r.value; });
   res.json(obj);
 });
