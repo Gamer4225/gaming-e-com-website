@@ -1,4 +1,5 @@
 // Orders.tsx — Reads from server database via api.orders
+import { useAuth } from "../context/AuthContext";
 import { useOrders } from "../context/OrderContext";
 import ProductImage from "../components/ProductImage/ProductImage";
 import "./StaticPages.css";
