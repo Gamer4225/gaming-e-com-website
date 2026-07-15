@@ -158,11 +158,7 @@ function ensureSchema(db) {
   }
   // Migration: add status column if missing
   const ocols = db.prepare("PRAGMA table_info(orders)").all().map(c => c.name);
-  // New tables migration
-  try { db.exec("CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, productId INTEGER NOT NULL, userId INTEGER, userName TEXT NOT NULL, rating INTEGER NOT NULL, comment TEXT, status TEXT DEFAULT 'pending', verified INTEGER DEFAULT 0, helpfulVotes INTEGER DEFAULT 0, createdAt TEXT NOT NULL)"); } catch {}
-  try { db.exec("CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, discountType TEXT DEFAULT 'percentage', discountValue INTEGER, minCart INTEGER DEFAULT 0, maxUses INTEGER, currentUses INTEGER DEFAULT 0, category TEXT, expiresAt TEXT, status TEXT DEFAULT 'active', createdAt TEXT NOT NULL)"); } catch {}
-  try { db.exec("CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, userName TEXT NOT NULL, action TEXT NOT NULL, details TEXT, createdAt TEXT NOT NULL)"); } catch {}
-  try { db.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"); } catch {}
+
   if (!ocols.includes("status")) {
     db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Processing'");
   }
@@ -170,6 +166,13 @@ function ensureSchema(db) {
     try { db.exec("ALTER TABLE orders ADD COLUMN userId INTEGER"); } catch {}
   }
 
+  // New tables migration (for existing DBs that don't have these)
+  try { db.exec("CREATE TABLE IF NOT EXISTS wishlists (id INTEGER PRIMARY KEY AUTOINCREMENT, productId INTEGER NOT NULL UNIQUE, count INTEGER NOT NULL DEFAULT 1, lastAdded TEXT NOT NULL)"); } catch(e) { console.log("wishlists migration:", e.message); }
+  try { db.exec("CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, productId INTEGER NOT NULL, userId INTEGER, userName TEXT NOT NULL, rating INTEGER NOT NULL, comment TEXT, status TEXT DEFAULT 'pending', verified INTEGER DEFAULT 0, helpfulVotes INTEGER DEFAULT 0, createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, discountType TEXT DEFAULT 'percentage', discountValue INTEGER, minCart INTEGER DEFAULT 0, maxUses INTEGER, currentUses INTEGER DEFAULT 0, category TEXT, expiresAt TEXT, status TEXT DEFAULT 'active', createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, userName TEXT NOT NULL, action TEXT NOT NULL, details TEXT, createdAt TEXT NOT NULL)"); } catch {}
+  try { db.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"); } catch {}
+  
   // Users table migrations
   const ucols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
   if (!ucols.includes("brand")) { try { db.exec("ALTER TABLE users ADD COLUMN brand TEXT"); } catch {} }
@@ -648,6 +651,9 @@ app.post("/api/orders", (req, res) => {
         return { id: product.id, stock: row.stock };
       });
 
+      // Log the order
+      logActivity(db, req.user?.id, req.user?.name || req.body.address?.fullName || "Guest", "order_placed", `Order ${orderId} - ₹${grandTotal}`);
+
       return {
         orderId,
         items: orderItems,
@@ -1018,6 +1024,7 @@ app.post("/api/wishlist/:id", (req, res) => {
     db.prepare("INSERT INTO wishlists (productId, count, lastAdded) VALUES (?, 1, ?)").run(productId, new Date().toISOString());
     res.json({ added: true, productId });
   }
+  console.log("Wishlist toggle: product " + productId + (existing ? " removed, count=" + (db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c) : " added, count=" + db.prepare("SELECT COUNT(*) as c FROM wishlists").get().c));
 });
 
 app.post("/api/wishlist/sync", (req, res) => {
@@ -1283,7 +1290,9 @@ app.post("/api/admin/reviews/seed", adminRequired, (_req, res) => {
   const count = db.prepare("SELECT COUNT(*) as c FROM reviews").get().c;
   if (count > 0) return res.json({ ok: true, msg: `${count} reviews already exist` });
   const prods = db.prepare("SELECT id, name FROM products ORDER BY RANDOM() LIMIT 40").all();
+  if (prods.length === 0) return res.json({ ok: false, error: "No products found" });
   const users = db.prepare("SELECT id, name FROM users LIMIT 10").all();
+  if (users.length === 0) return res.json({ ok: false, error: "No users found" });
   const stmt = db.prepare("INSERT INTO reviews (productId, userId, userName, rating, comment, status, verified, createdAt) VALUES (?,?,?,?,?,?,?,?)");
   const now = new Date();
   let n = 0;
@@ -1293,6 +1302,7 @@ app.post("/api/admin/reviews/seed", adminRequired, (_req, res) => {
     stmt.run(p.id, u.id, u.name, rating, `Great ${p.name}! Works perfectly for gaming.`, "approved", 1, new Date(now - Math.random() * 30*86400000).toISOString());
     n++;
   }
+  logActivity(db, _req.user.id, _req.user.name, "reviews_seeded", `Seeded ${n} demo reviews`);
   res.json({ ok: true, seeded: n });
 });
 
